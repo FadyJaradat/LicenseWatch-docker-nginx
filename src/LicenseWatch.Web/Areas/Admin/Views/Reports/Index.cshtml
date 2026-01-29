@@ -1,0 +1,32 @@
+@model LicenseWatch.Web.Models.Admin.ReportsLandingViewModel
+@{
+    ViewData["Title"] = "Reports";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Reports center",
+        Subtitle = "Generate executive-ready exports with precise filters and presets.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-area="Admin" asp-controller="Audit" asp-action="Index">Audit log</a>
+            <a class="btn btn-primary lw-btn" asp-area="Admin" asp-controller="Home" asp-action="Index">Back to dashboard</a>
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+<div class="row g-4">
+    @foreach (var report in Model.Reports)
+    {
+        <div class="col-lg-3 col-md-6">
+            <div class="card lw-card p-4 h-100">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="icon-circle"><i class="bi @report.Icon"></i></span>
+                    <h5 class="mb-0">@report.Title</h5>
+                </div>
+                <p class="text-muted">@report.Description</p>
+                <a class="btn btn-outline-primary lw-btn mt-auto" href="@report.Url">Open report</a>
+            </div>
+        </div>
+    }
+</div>
+

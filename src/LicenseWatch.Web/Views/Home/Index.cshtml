@@ -1,0 +1,142 @@
+@{
+    ViewData["Title"] = "Home";
+    var isAdmin = User?.IsInRole("SystemAdmin") == true;
+}
+
+<section class="hero-section fade-up">
+    <div class="row g-4 align-items-center">
+        <div class="col-lg-7">
+            <span class="badge rounded-pill text-bg-light border">Release @AppInfo.DisplayVersion</span>
+            <h1 class="display-5 fw-semibold mt-3">License intelligence that stays ahead of renewals</h1>
+            <p class="lead text-muted">Track vendors, seats, usage, compliance, and renewal risk in one premium console built for modern IT operations.</p>
+            <div class="d-flex flex-wrap gap-2">
+                @if (User?.Identity?.IsAuthenticated ?? false)
+                {
+                    <a class="btn btn-primary" asp-area="Admin" asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-shield-check me-1"></i> Open admin console
+                    </a>
+                    <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="Licenses" asp-action="Index">
+                        Browse licenses
+                    </a>
+                }
+                else
+                {
+                    <a class="btn btn-primary" asp-controller="Account" asp-action="Login">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign in
+                    </a>
+                    <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Register">Request access</a>
+                }
+                @if (isAdmin)
+                {
+                    <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="System" asp-action="Index">
+                        System status
+                    </a>
+                }
+            </div>
+            <div class="row g-3 mt-4">
+                <div class="col-sm-6">
+                    <div class="metric-tile lw-card">
+                        <div class="text-muted small">Compliance ready</div>
+                        <div class="fw-semibold">Track expiring and overused licenses</div>
+                        <p class="small text-muted mb-0">Prioritize renewals and spot risk before it escalates.</p>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="metric-tile lw-card">
+                        <div class="text-muted small">Operational clarity</div>
+                        <div class="fw-semibold">Centralize settings and system health</div>
+                        <p class="small text-muted mb-0">Run migrations, monitor jobs, and manage users in one place.</p>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="metric-tile lw-card">
+                        <div class="text-muted small">Optimization</div>
+                        <div class="fw-semibold">Spot unused spend fast</div>
+                        <p class="small text-muted mb-0">Turn usage signals into savings recommendations.</p>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="metric-tile lw-card">
+                        <div class="text-muted small">Executive reporting</div>
+                        <div class="fw-semibold">Beautiful exports in minutes</div>
+                        <p class="small text-muted mb-0">Deliver inventory and risk snapshots to stakeholders.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="glass-card lw-card p-4 shadow-sm">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="icon-circle"><i class="bi bi-graph-up-arrow"></i></span>
+                    <div>
+                        <h5 class="mb-1">Status at a glance</h5>
+                        <p class="text-muted small mb-0">Live system cues for admins and analysts.</p>
+                    </div>
+                </div>
+                <div class="d-grid gap-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">Renewals due soon</div>
+                            <div class="small text-muted">30 day window</div>
+                        </div>
+                        <span class="badge text-bg-warning">Review</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">Compliance alerts</div>
+                            <div class="small text-muted">Overuse and expiration checks</div>
+                        </div>
+                        <span class="badge text-bg-danger">Critical</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">Optimization insights</div>
+                            <div class="small text-muted">Underutilized seats detected</div>
+                        </div>
+                        <span class="badge text-bg-success">Active</span>
+                    </div>
+                </div>
+                <hr />
+                <div class="small text-muted">Need access? Contact your system admin to enroll your workspace.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mt-5 fade-up">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="feature-tile lw-card h-100">
+                <h5>Governance first</h5>
+                <p class="text-muted">Built-in compliance, audit trails, and role controls keep every change accountable.</p>
+                <ul class="list-unstyled small text-muted mb-0">
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>SystemAdmin gated tools</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>Secure data protection keys</li>
+                    <li><i class="bi bi-check-circle-fill text-accent me-2"></i>Readiness checks and diagnostics</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="feature-tile lw-card h-100">
+                <h5>Actionable insights</h5>
+                <p class="text-muted">Dashboards, compliance center, and optimization cards turn data into decisions.</p>
+                <ul class="list-unstyled small text-muted mb-0">
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>Expiring soon lists</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>Usage driven recommendations</li>
+                    <li><i class="bi bi-check-circle-fill text-accent me-2"></i>Audit log visibility</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="feature-tile lw-card h-100">
+                <h5>Operator ready</h5>
+                <p class="text-muted">Docker-first workflows, maintenance tools, and migration guidance built in.</p>
+                <ul class="list-unstyled small text-muted mb-0">
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>Backup and restore tooling</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>Hangfire job control</li>
+                    <li><i class="bi bi-check-circle-fill text-accent me-2"></i>Configurable settings store</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>

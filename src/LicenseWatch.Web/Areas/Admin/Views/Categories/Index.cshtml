@@ -1,0 +1,125 @@
+@model LicenseWatch.Web.Models.Admin.CategoryListViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Categories";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.CategoriesManage);
+    var canImport = await PermissionService.HasPermissionAsync(User, PermissionKeys.ImportManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Categories",
+        Subtitle = "Group licenses and apply consistent policies.",
+        Actions = @<text>
+            @if (canManage)
+            {
+                <a class="btn btn-primary lw-btn" asp-action="Create">
+                    <i class="bi bi-plus-circle me-1"></i>New category
+                </a>
+            }
+            else
+            {
+                <button class="btn btn-primary lw-btn" type="button" disabled title="You do not have permission to manage categories.">
+                    <i class="bi bi-plus-circle me-1"></i>New category
+                </button>
+            }
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<form method="get" class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body d-flex flex-column flex-md-row gap-3 align-items-md-end">
+        <div class="flex-grow-1">
+            <label class="form-label text-muted small">Search</label>
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search categories" />
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary lw-btn" type="submit"><i class="bi bi-search me-1"></i>Filter</button>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/categories">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        @if (!Model.Categories.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-tags",
+                Title = "No categories yet",
+                Message = "Create a category to group licenses and align governance policies."
+            };
+            if (canManage)
+            {
+                emptyState.PrimaryCta = new CtaViewModel
+                {
+                    Label = "Create category",
+                    Url = "/admin/categories/create",
+                    Icon = "bi-plus-circle"
+                };
+            }
+            if (canImport)
+            {
+                emptyState.SecondaryCta = new CtaViewModel
+                {
+                    Label = "Import CSV",
+                    Url = "/admin/import",
+                    Icon = "bi-cloud-arrow-up"
+                };
+            }
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Licenses</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var category in Model.Categories)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@category.Name</td>
+                                <td class="text-secondary">@category.Description</td>
+                                <td>@category.LicenseCount</td>
+                                <td class="text-muted small">@category.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td class="text-end">
+                                    @if (canManage)
+                                    {
+                                        <a class="btn btn-sm btn-outline-primary lw-btn" asp-action="Edit" asp-route-id="@category.Id">Edit</a>
+                                        <form asp-action="Delete" asp-route-id="@category.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger lw-btn" data-loading-text="Deleting...">Delete</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage categories.">Edit</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+

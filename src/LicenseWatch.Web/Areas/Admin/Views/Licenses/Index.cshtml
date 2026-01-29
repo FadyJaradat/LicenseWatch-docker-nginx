@@ -1,0 +1,175 @@
+@model LicenseWatch.Web.Models.Admin.LicenseListViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Licenses";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.LicensesManage);
+    var canImport = await PermissionService.HasPermissionAsync(User, PermissionKeys.ImportManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Licenses",
+        Subtitle = "Track usage, expirations, and compliance risks.",
+        Actions = @<text>
+            @if (canManage)
+            {
+                <a class="btn btn-primary lw-btn" asp-action="Create">
+                    <i class="bi bi-plus-circle me-1"></i>Create license
+                </a>
+            }
+            else
+            {
+                <button class="btn btn-primary lw-btn" type="button" disabled title="You do not have permission to manage licenses.">
+                    <i class="bi bi-plus-circle me-1"></i>Create license
+                </button>
+            }
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<form method="get" class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Category</label>
+                <select class="form-select" name="categoryId">
+                    <option value="">All</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Id" selected="@(Model.CategoryId == category.Id)">@category.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All</option>
+                    <option value="Good" selected="@(Model.Status == "Good")">Good</option>
+                    <option value="Warning" selected="@(Model.Status == "Warning")">Warning</option>
+                    <option value="Critical" selected="@(Model.Status == "Critical")">Critical</option>
+                    <option value="Expired" selected="@(Model.Status == "Expired")">Expired</option>
+                    <option value="Unknown" selected="@(Model.Status == "Unknown")">Unknown</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Expiring</label>
+                <select class="form-select" name="expiringDays">
+                    <option value="">Any</option>
+                    <option value="7" selected="@(Model.ExpiringDays == 7)">7 days</option>
+                    <option value="30" selected="@(Model.ExpiringDays == 30)">30 days</option>
+                    <option value="90" selected="@(Model.ExpiringDays == 90)">90 days</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Search</label>
+                <input class="form-control" name="search" value="@Model.Search" placeholder="Name or vendor" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Over-allocated</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="overAllocated" value="true" @(Model.OverAllocated ? "checked" : "") />
+                    <label class="form-check-label">Only show</label>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary lw-btn" type="submit"><i class="bi bi-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/licenses">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        @if (!Model.Licenses.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-file-earmark-plus",
+                Title = "No licenses yet",
+                Message = "Create your first license or import a CSV to begin tracking usage and renewals."
+            };
+            if (canManage)
+            {
+                emptyState.PrimaryCta = new CtaViewModel
+                {
+                    Label = "Create license",
+                    Url = "/admin/licenses/create",
+                    Icon = "bi-plus-circle"
+                };
+            }
+            if (canImport)
+            {
+                emptyState.SecondaryCta = new CtaViewModel
+                {
+                    Label = "Import CSV",
+                    Url = "/admin/import",
+                    Icon = "bi-cloud-arrow-up"
+                };
+            }
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Vendor</th>
+                            <th>Category</th>
+                            <th>Expires</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var license in Model.Licenses)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@license.Name</td>
+                                <td class="text-secondary">@license.Vendor</td>
+                                <td>@license.CategoryName</td>
+                                <td>@(license.ExpiresOnUtc?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                <td><span class="badge @StatusBadge(license.Status)">@license.Status</span></td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-primary lw-btn" asp-action="Details" asp-route-id="@license.Id">View</a>
+                                    @if (canManage)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary lw-btn" asp-action="Edit" asp-route-id="@license.Id">Edit</a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage licenses.">Edit</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private static string StatusBadge(string status)
+        => status switch
+        {
+            "Good" => "bg-success-subtle text-success",
+            "Warning" => "bg-warning-subtle text-warning",
+            "Critical" => "bg-danger-subtle text-danger",
+            "Expired" => "bg-dark text-white",
+            _ => "bg-light text-muted border"
+        };
+}
+
+

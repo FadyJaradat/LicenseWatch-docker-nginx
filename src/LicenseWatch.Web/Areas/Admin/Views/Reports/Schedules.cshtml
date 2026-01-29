@@ -1,0 +1,148 @@
+@model LicenseWatch.Web.Models.Admin.ReportScheduleListViewModel
+@using LicenseWatch.Web.Security
+@{
+    ViewData["Title"] = "Report schedules";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Report schedules",
+        Subtitle = "Deliver reports automatically to stakeholders and retain delivery history.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Index">
+                <i class="bi bi-arrow-left me-1"></i>Reports center
+            </a>
+            @if (Model.CanManage)
+            {
+                <a class="btn btn-primary lw-btn" asp-action="CreateSchedule">
+                    <i class="bi bi-plus-lg me-1"></i>New schedule
+                </a>
+            }
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<div class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        @if (!Model.Schedules.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-envelope-open",
+                Title = "No report schedules yet",
+                Message = "Create a schedule to deliver reports to stakeholders on a predictable cadence.",
+                PrimaryCta = Model.CanManage
+                    ? new CtaViewModel { Label = "Create schedule", Url = "/admin/reports/schedules/create", Icon = "bi-plus-lg" }
+                    : null
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Schedule</th>
+                            <th>Report</th>
+                            <th>Recipients</th>
+                            <th>Next run</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var schedule in Model.Schedules)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@schedule.Name</div>
+                                    <div class="text-muted small">@schedule.ScheduleLabel</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@schedule.ReportName</div>
+                                    <div class="text-muted small">@schedule.Format.ToUpperInvariant()</div>
+                                </td>
+                                <td class="text-truncate max-w-260">@schedule.Recipients</td>
+                                <td class="text-muted small">@schedule.NextRunUtc?.ToLocalTime().ToString("g")</td>
+                                <td>
+                                    <span class="badge @(schedule.IsEnabled ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary")">
+                                        @(schedule.IsEnabled ? "Enabled" : "Paused")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    @if (Model.CanRun)
+                                    {
+                                        <form asp-action="RunSchedule" asp-route-jobKey="@schedule.Key" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button class="btn btn-sm btn-outline-primary lw-btn" type="submit" data-loading-text="Queueing...">Run now</button>
+                                        </form>
+                                    }
+                                    @if (Model.CanManage)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary lw-btn" asp-action="EditSchedule" asp-route-jobKey="@schedule.Key">Edit</a>
+                                        <form asp-action="ToggleSchedule" asp-route-jobKey="@schedule.Key" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="enable" value="@(!schedule.IsEnabled)" />
+                                            <button class="btn btn-sm btn-outline-secondary lw-btn" type="submit">
+                                                @(schedule.IsEnabled ? "Pause" : "Enable")
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 fw-semibold mb-0">Recent deliveries</h2>
+            <a class="btn btn-sm btn-outline-secondary lw-btn" href="/admin/email/log">Email log</a>
+        </div>
+        @if (!Model.RecentDeliveries.Any())
+        {
+            <div class="text-muted small">No report deliveries have been logged yet.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Sent</th>
+                            <th>Status</th>
+                            <th>Recipient</th>
+                            <th>Subject</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.RecentDeliveries)
+                        {
+                            <tr>
+                                <td class="text-muted small">@log.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td>
+                                    <span class="badge @(log.Status == "Sent" ? "bg-success-subtle text-success" : log.Status == "Failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning")">
+                                        @log.Status
+                                    </span>
+                                </td>
+                                <td>@log.ToEmail</td>
+                                <td class="text-truncate max-w-360">@log.Subject</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

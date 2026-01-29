@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = "Access denied";
+    var emptyState = new EmptyStateViewModel
+    {
+        Icon = "bi-shield-x",
+        Title = "Access denied",
+        Message = "You are signed in but do not have permission to view this page.",
+        PrimaryCta = new CtaViewModel { Label = "Return home", Url = Url.Content("~/") ?? "/" },
+        SecondaryCta = new CtaViewModel { Label = "Switch account", Url = "/account/login" }
+    };
+}
+
+<section class="fade-up">
+    <div class="text-center mb-4">
+        <partial name="_Logo" model="@("lw-logo--lg")" />
+    </div>
+    <partial name="_EmptyState" model="emptyState" />
+    <p class="small text-muted text-center mt-3">Need elevated access? Ask a SystemAdmin to assign the correct role.</p>
+</section>

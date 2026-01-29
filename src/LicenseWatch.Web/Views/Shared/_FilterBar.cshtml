@@ -1,0 +1,17 @@
+@model FilterBarViewModel
+
+<div class="lw-filter-bar">
+    <div class="lw-filter-bar__label text-muted small">@Model.Label</div>
+    <div class="lw-filter-bar__pills">
+        @foreach (var filter in Model.Filters)
+        {
+            <a class="lw-filter-pill @(filter.IsActive ? "active" : string.Empty)" href="@filter.Url" aria-pressed="@(filter.IsActive ? "true" : "false")">
+                @filter.Label
+            </a>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.ClearUrl))
+    {
+        <a class="lw-filter-clear" href="@Model.ClearUrl">Clear</a>
+    }
+</div>

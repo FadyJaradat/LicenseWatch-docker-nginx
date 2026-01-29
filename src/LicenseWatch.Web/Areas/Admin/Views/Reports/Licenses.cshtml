@@ -1,0 +1,202 @@
+@model LicenseWatch.Web.Models.Admin.LicenseReportViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "License inventory";
+    var results = Model.Results;
+    var exportCsvUrl = Url.Action("LicensesExport", "Reports", new { area = "Admin", categoryId = Model.CategoryId, vendor = Model.Vendor, status = Model.Status, expiresFrom = Model.ExpiresFrom?.ToString("yyyy-MM-dd"), expiresTo = Model.ExpiresTo?.ToString("yyyy-MM-dd"), format = "csv" });
+    var exportExcelUrl = Url.Action("LicensesExport", "Reports", new { area = "Admin", categoryId = Model.CategoryId, vendor = Model.Vendor, status = Model.Status, expiresFrom = Model.ExpiresFrom?.ToString("yyyy-MM-dd"), expiresTo = Model.ExpiresTo?.ToString("yyyy-MM-dd"), format = "excel" });
+    var canManageLicenses = await PermissionService.HasPermissionAsync(User, PermissionKeys.LicensesManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "License inventory",
+        Subtitle = "Full inventory with ownership, seats, and renewal dates.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-area="Admin" asp-controller="Reports" asp-action="Index">All reports</a>
+            <div class="btn-group">
+                <button class="btn btn-primary lw-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="@exportCsvUrl">Export CSV</a></li>
+                    <li><a class="dropdown-item" href="@exportExcelUrl">Export Excel</a></li>
+                </ul>
+            </div>
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle" data-toast="true" role="alert">@Model.AlertMessage</div>
+}
+
+<div class="card lw-card p-4 mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Category</label>
+            <select class="form-select" name="categoryId">
+                <option value="">All categories</option>
+                @foreach (var category in Model.Categories)
+                {
+                    <option value="@category.Id" selected="@(Model.CategoryId == category.Id ? "selected" : null)">@category.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Vendor</label>
+            <input class="form-control" name="vendor" value="@Model.Vendor" placeholder="Search vendor" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="">All statuses</option>
+                @foreach (var option in Model.StatusOptions)
+                {
+                    <option value="@option" selected="@(string.Equals(option, Model.Status, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@option</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Expires from</label>
+            <input type="date" class="form-control" name="expiresFrom" value="@Model.ExpiresFrom?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Expires to</label>
+            <input type="date" class="form-control" name="expiresTo" value="@Model.ExpiresTo?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary lw-btn">Apply filters</button>
+            <a class="btn btn-outline-secondary lw-btn" asp-area="Admin" asp-controller="Reports" asp-action="Licenses">Reset</a>
+            <span class="text-muted small align-self-center">Last refreshed @Model.LastRefreshedUtc.ToString("g")</span>
+        </div>
+    </form>
+</div>
+
+<div class="card lw-card p-4 mb-4">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
+        <div>
+            <h5 class="mb-1">Saved presets</h5>
+            <div class="text-muted small">Reuse filters for recurring reports.</div>
+        </div>
+        <form asp-area="Admin" asp-controller="Reports" asp-action="SavePreset" method="post" class="d-flex flex-wrap gap-2" id="license-presets">
+            <input type="hidden" name="ReportKey" value="LicenseInventory" />
+            <input type="hidden" name="CategoryId" value="@Model.CategoryId" />
+            <input type="hidden" name="Vendor" value="@Model.Vendor" />
+            <input type="hidden" name="Status" value="@Model.Status" />
+            <input type="hidden" name="ExpiresFrom" value="@Model.ExpiresFrom?.ToString("yyyy-MM-dd")" />
+            <input type="hidden" name="ExpiresTo" value="@Model.ExpiresTo?.ToString("yyyy-MM-dd")" />
+            <input class="form-control" name="Name" placeholder="Preset name" />
+            <button type="submit" class="btn btn-outline-primary lw-btn">Save preset</button>
+        </form>
+    </div>
+    @if (Model.Presets.Count == 0)
+    {
+        <div class="lw-empty-inline">
+            <span class="lw-empty-inline__icon"><i class="bi bi-bookmark-star"></i></span>
+            <div class="text-muted small">No presets yet. Save the current filters to reuse later.</div>
+            <a class="btn btn-sm btn-outline-secondary lw-btn" href="#license-presets">Save preset</a>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var preset in Model.Presets)
+            {
+                <a class="badge text-bg-light border" asp-area="Admin" asp-controller="Reports" asp-action="ApplyPreset" asp-route-id="@preset.Id">@preset.Name</a>
+            }
+        </div>
+    }
+</div>
+
+<div class="card lw-card p-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0">Results</h5>
+        <div class="text-muted small">Total @results?.TotalCount</div>
+    </div>
+    @if (results is null || results.Items.Count == 0)
+    {
+        var emptyState = new EmptyStateViewModel
+        {
+            Icon = "bi-file-earmark-check",
+            Title = "No licenses match these filters",
+            Message = "Adjust the filters or add new licenses to populate the inventory report.",
+            PrimaryCta = new CtaViewModel
+            {
+                Label = "Reset filters",
+                Url = "/admin/reports/licenses",
+                Icon = "bi-arrow-counterclockwise"
+            }
+        };
+        if (canManageLicenses)
+        {
+            emptyState.SecondaryCta = new CtaViewModel
+            {
+                Label = "Create license",
+                Url = "/admin/licenses/create",
+                Icon = "bi-plus-circle"
+            };
+        }
+        <partial name="_EmptyState" model="emptyState" />
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Vendor</th>
+                        <th>Category</th>
+                        <th>Seats</th>
+                        <th>Expires</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in results.Items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@row.Name</td>
+                            <td>@(row.Vendor ?? "-")</td>
+                            <td>@row.Category</td>
+                            <td>@row.SeatsAssigned / @row.SeatsPurchased</td>
+                            <td>@(row.ExpiresOnUtc?.ToString("yyyy-MM-dd") ?? "-")</td>
+                            <td><span class="badge @StatusBadge(row.Status)">@row.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (results is not null && results.TotalPages > 1)
+    {
+        <nav class="mt-3">
+            <ul class="pagination">
+        @for (var pageNumber = 1; pageNumber <= results.TotalPages; pageNumber++)
+        {
+            <li class="page-item @(pageNumber == results.Page ? "active" : "")">
+                <a class="page-link" href="@Url.Action("Licenses", "Reports", new { area = "Admin", page = pageNumber, categoryId = Model.CategoryId, vendor = Model.Vendor, status = Model.Status, expiresFrom = Model.ExpiresFrom?.ToString("yyyy-MM-dd"), expiresTo = Model.ExpiresTo?.ToString("yyyy-MM-dd") })">@pageNumber</a>
+            </li>
+        }
+            </ul>
+        </nav>
+    }
+</div>
+
+@functions {
+    private static string StatusBadge(string status)
+    {
+        return status switch
+        {
+            "Expired" => "bg-danger-subtle text-danger",
+            "Critical" => "bg-danger-subtle text-danger",
+            "Warning" => "bg-warning-subtle text-warning",
+            "Good" => "bg-success-subtle text-success",
+            _ => "bg-light text-muted border"
+        };
+    }
+}
+
+

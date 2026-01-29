@@ -1,0 +1,11 @@
+bin/
+obj/
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/node_modules/
+**/npm-debug.log
+**/.git/
+**/.DS_Store
+backups/

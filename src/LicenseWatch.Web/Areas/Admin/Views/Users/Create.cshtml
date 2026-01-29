@@ -1,0 +1,23 @@
+@{
+    ViewData["Title"] = "Create user";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Create user",
+        Subtitle = "Generate a local account with a temporary password."
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+<div class="card lw-card p-4">
+    <form asp-area="Admin" asp-controller="Users" asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input class="form-control" name="email" placeholder="user@company.com" />
+        </div>
+        <button type="submit" class="btn btn-primary lw-btn" data-loading-text="Creating...">Create user</button>
+        <a class="btn btn-outline-secondary lw-btn ms-2" asp-area="Admin" asp-controller="Users" asp-action="Index">Cancel</a>
+    </form>
+</div>
+

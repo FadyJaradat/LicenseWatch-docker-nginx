@@ -1,0 +1,26 @@
+@{
+    var active = (ViewData["EmailNav"] as string ?? string.Empty).ToLowerInvariant();
+}
+
+<ul class="nav nav-pills gap-2 mb-4">
+    <li class="nav-item">
+        <a class="nav-link @(active == "settings" ? "active" : "")" href="/admin/email">
+            <i class="bi bi-gear me-1"></i>Settings
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(active == "notifications" ? "active" : "")" href="/admin/email/notifications">
+            <i class="bi bi-bell me-1"></i>Notifications
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(active == "templates" ? "active" : "")" href="/admin/email/templates">
+            <i class="bi bi-envelope-paper me-1"></i>Templates
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(active == "log" ? "active" : "")" href="/admin/email/log">
+            <i class="bi bi-inbox me-1"></i>Log
+        </a>
+    </li>
+</ul>

@@ -1,0 +1,215 @@
+@model LicenseWatch.Web.Models.Admin.RoleDetailViewModel
+@using System.Linq
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = $"{Model.RoleName} permissions";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.RolesManage);
+    var grantedPermissions = Model.Groups
+        .SelectMany(group => group.Permissions.Where(permission => permission.IsGranted)
+            .Select(permission => new
+            {
+                group.GroupName,
+                permission.Label,
+                permission.IsManage
+            }))
+        .ToList();
+    var totalGranted = grantedPermissions.Count;
+    var manageGranted = grantedPermissions.Count(item => item.IsManage);
+    var groupCounts = Model.Groups
+        .Select(group => new { group.GroupName, Count = group.Permissions.Count(permission => permission.IsGranted) })
+        .Where(item => item.Count > 0)
+        .OrderByDescending(item => item.Count)
+        .ToList();
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = Model.RoleName,
+        Subtitle = "Assign granular permissions to control access across LicenseWatch.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Index">
+                <i class="bi bi-arrow-left me-1"></i>Back to roles
+            </a>
+            <button type="submit"
+                    class="btn btn-primary lw-btn"
+                    form="permissions-form"
+                    data-loading-text="Saving..."
+                    @(canManage && !Model.IsSystemRole ? "" : "disabled")>
+                <i class="bi bi-shield-check me-1"></i>Save permissions
+            </button>
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle" data-toast="true" role="alert">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <pre class="small mb-0">@Model.AlertDetails</pre>
+            </details>
+        }
+    </div>
+}
+
+@if (Model.IsSystemRole)
+{
+    <div class="alert alert-info d-flex align-items-center gap-2" role="alert">
+        <i class="bi bi-shield-lock"></i>
+        <div>SystemAdmin always has full access. Permission changes are locked for safety.</div>
+    </div>
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        @{
+            var summaryCard = new SectionCardViewModel
+            {
+                Title = "Role summary",
+                Subtitle = "Scope and assignment details.",
+                Body = @<text>
+                    <div class="lw-stack-md">
+                        <div>
+                            <div class="text-muted small text-uppercase">Users assigned</div>
+                            <div class="h4 fw-semibold mb-0">@Model.UserCount</div>
+                        </div>
+                        <div>
+                            <div class="text-muted small text-uppercase">Permissions granted</div>
+                            <div class="h4 fw-semibold mb-0">@Model.Groups.Sum(g => g.Permissions.Count(p => p.IsGranted))</div>
+                        </div>
+                        <div class="text-muted small">
+                            Permissions determine which pages and actions appear in the admin console.
+                        </div>
+                    </div>
+                </text>
+            };
+        }
+        <partial name="_SectionCard" model="summaryCard" />
+    </div>
+    <div class="col-lg-8">
+        @{
+            var guidanceCard = new SectionCardViewModel
+            {
+                Title = "How to assign permissions",
+                Subtitle = "Use these groups to grant view or manage access.",
+                Body = @<text>
+                    <ul class="text-muted small mb-0">
+                        <li>Manage permissions include the corresponding view access.</li>
+                        <li>Disable access to sensitive modules for least privilege.</li>
+                        <li>Changes take effect immediately for users in this role.</li>
+                    </ul>
+                </text>
+            };
+        }
+        <partial name="_SectionCard" model="guidanceCard" />
+        @{
+            var effectiveCard = new SectionCardViewModel
+            {
+                Title = "Effective access preview",
+                Subtitle = "Snapshot of permissions currently granted to this role.",
+                Body = @<text>
+                    @if (totalGranted == 0)
+                    {
+                        <div class="text-muted small">No permissions assigned yet. Select permissions below to grant access.</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge bg-primary-subtle text-primary border">@totalGranted total</span>
+                            <span class="badge bg-warning-subtle text-warning border">@manageGranted manage</span>
+                            <span class="badge bg-light text-muted border">@(totalGranted - manageGranted) view</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            @foreach (var item in groupCounts)
+                            {
+                                <span class="badge bg-light text-muted border">@item.GroupName: @item.Count</span>
+                            }
+                        </div>
+                        <div class="small text-muted mb-2">Most visible permissions</div>
+                        <ul class="list-unstyled small mb-0">
+                            @foreach (var permission in grantedPermissions.Take(8))
+                            {
+                                <li class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge bg-light text-muted border">@permission.GroupName</span>
+                                    <span>@permission.Label</span>
+                                </li>
+                            }
+                            @if (totalGranted > 8)
+                            {
+                                <li class="text-muted">+@(totalGranted - 8) more</li>
+                            }
+                        </ul>
+                    }
+                </text>
+            };
+        }
+        <div class="mt-4">
+            <partial name="_SectionCard" model="effectiveCard" />
+        </div>
+    </div>
+</div>
+
+<form id="permissions-form" asp-action="UpdatePermissions" asp-route-roleName="@Model.RoleName" method="post">
+    @Html.AntiForgeryToken()
+    <div class="row g-4">
+        @for (var index = 0; index < Model.Groups.Count; index++)
+        {
+            var group = Model.Groups[index];
+            <div class="col-12">
+                <div class="card lw-card shadow-sm border-0">
+                    <div class="card-header d-flex flex-wrap gap-3 justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">@group.GroupName</h5>
+                            <div class="text-muted small">Permissions for @group.GroupName workflows.</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input lw-permission-group-toggle"
+                                   type="checkbox"
+                                   role="switch"
+                                   data-group-index="@index"
+                                   @(group.AllSelected ? "checked" : "")
+                                   @(canManage && !Model.IsSystemRole ? "" : "disabled") />
+                            <label class="form-check-label text-muted small">Select all</label>
+                        </div>
+                    </div>
+                    <div class="card-body lw-card-body">
+                        <div class="row g-3">
+                            @foreach (var permission in group.Permissions)
+                            {
+                                <div class="col-md-6">
+                                    <label class="lw-permission d-flex align-items-start gap-3">
+                                        <input class="form-check-input mt-1 lw-permission-checkbox"
+                                               type="checkbox"
+                                               name="selectedPermissions"
+                                               value="@permission.Key"
+                                               data-group-index="@index"
+                                               @(permission.IsGranted ? "checked" : "")
+                                               @(canManage && !Model.IsSystemRole ? "" : "disabled") />
+                                        <span>
+                                            <span class="d-flex align-items-center gap-2">
+                                                <span class="fw-semibold">@permission.Label</span>
+                                                @if (permission.IsManage)
+                                                {
+                                                    <span class="badge bg-warning-subtle text-warning border">Manage</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-light text-muted border">View</span>
+                                                }
+                                            </span>
+                                            <span class="text-muted small d-block">@permission.Description</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</form>

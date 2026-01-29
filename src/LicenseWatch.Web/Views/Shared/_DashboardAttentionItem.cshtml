@@ -1,0 +1,27 @@
+@model LicenseWatch.Web.Models.Admin.AttentionItemViewModel
+@{
+    var collapseId = $"attention-{Guid.NewGuid():N}";
+    var badgeClass = string.Equals(Model.Severity, "Critical", StringComparison.OrdinalIgnoreCase)
+        ? "bg-danger-subtle text-danger"
+        : "bg-warning-subtle text-warning";
+}
+
+<div class="attention-item">
+    <div class="d-flex flex-column flex-sm-row justify-content-between gap-2">
+        <div>
+            <span class="badge @badgeClass">@Model.Severity</span>
+            <div class="fw-semibold mt-2">@Model.Title</div>
+            <div class="small text-muted">Evidence available</div>
+        </div>
+        <div class="d-flex align-items-start gap-2">
+            @if (!string.IsNullOrWhiteSpace(Model.TargetUrl))
+            {
+                <a class="btn btn-sm btn-outline-primary" href="@Model.TargetUrl">Review</a>
+            }
+            <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId">Details</button>
+        </div>
+    </div>
+    <div class="collapse mt-2" id="@collapseId">
+        <div class="small text-muted">@Model.Summary</div>
+    </div>
+</div>

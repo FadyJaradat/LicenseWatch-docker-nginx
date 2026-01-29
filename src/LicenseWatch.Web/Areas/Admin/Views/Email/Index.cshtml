@@ -1,0 +1,129 @@
+@model LicenseWatch.Web.Models.Admin.EmailSettingsViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Email settings";
+    ViewData["EmailNav"] = "settings";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.EmailManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Email settings",
+        Subtitle = "Configure SMTP and send test messages safely."
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<partial name="_EmailNav" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-info-circle"></i>
+            <div>
+                <div>@Model.AlertMessage</div>
+                @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+                {
+                    <details class="lw-details mt-2">
+                        <summary>Details</summary>
+                        <div class="small text-muted mt-1">@Model.AlertDetails</div>
+                    </details>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<form asp-action="Save" method="post" class="card lw-card shadow-sm border-0 mb-4">
+    @Html.AntiForgeryToken()
+    <div class="card-body lw-card-body">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <h2 class="h6 fw-semibold mb-3">SMTP connection</h2>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">SMTP host</label>
+                    <input class="form-control" name="SmtpHost" value="@Model.Input.SmtpHost" placeholder="smtp.example.com" @(canManage ? "" : "disabled") />
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">SMTP port</label>
+                        <input class="form-control" name="SmtpPort" type="number" value="@Model.Input.SmtpPort" @(canManage ? "" : "disabled") />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Use SSL</label>
+                        <div class="form-check mt-2">
+                            <input id="UseSsl" name="UseSsl" type="checkbox" class="form-check-input" value="true" @(Model.Input.UseSsl ? "checked" : "") @(canManage ? "" : "disabled") />
+                            <label class="form-check-label" for="UseSsl">Enable TLS/SSL</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-check mt-3">
+                    <input id="IgnoreTlsErrors" name="IgnoreTlsErrors" type="checkbox" class="form-check-input" value="true" @(Model.Input.IgnoreTlsErrors ? "checked" : "") @(canManage ? "" : "disabled") />
+                    <label class="form-check-label fw-semibold" for="IgnoreTlsErrors">Ignore TLS certificate errors</label>
+                </div>
+                <div class="alert alert-warning mt-2 small">
+                    Only enable this if your SMTP relay uses self-signed certificates. Disabling TLS validation reduces security.
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Username</label>
+                        <input class="form-control" name="Username" value="@Model.Input.Username" @(canManage ? "" : "disabled") />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Password</label>
+                        <input class="form-control" name="Password" type="password" placeholder="@(Model.HasPassword ? "???????? (leave blank to keep)" : "Enter password")" @(canManage ? "" : "disabled") />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <h2 class="h6 fw-semibold mb-3">Sender identity</h2>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">From name</label>
+                    <input class="form-control" name="FromName" value="@Model.Input.FromName" @(canManage ? "" : "disabled") />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">From email</label>
+                    <input class="form-control" name="FromEmail" value="@Model.Input.FromEmail" @(canManage ? "" : "disabled") />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Default test recipient</label>
+                    <input class="form-control" name="DefaultToEmail" value="@Model.Input.DefaultToEmail" placeholder="optional" @(canManage ? "" : "disabled") />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Suppression window (minutes)</label>
+                    <input class="form-control" name="SuppressionMinutes" type="number" value="@Model.Input.SuppressionMinutes" @(canManage ? "" : "disabled") />
+                </div>
+                <div class="form-check mt-2">
+                    <input id="EnableDailySummary" name="EnableDailySummary" type="checkbox" class="form-check-input" value="true" @(Model.Input.EnableDailySummary ? "checked" : "") @(canManage ? "" : "disabled") />
+                    <label class="form-check-label" for="EnableDailySummary">Enable daily summary (future)</label>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary lw-btn" type="submit" data-loading-text="Saving..." @(canManage ? "" : "disabled")>
+                <i class="bi bi-save me-1"></i>Save settings
+            </button>
+        </div>
+    </div>
+</form>
+
+<form asp-action="SendTest" method="post" class="card lw-card shadow-sm border-0" id="send-test">
+    @Html.AntiForgeryToken()
+    <div class="card-body lw-card-body">
+        <h2 class="h6 fw-semibold mb-3">Send test email</h2>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Recipient</label>
+                <input class="form-control" name="toEmail" placeholder="Use default if blank" @(canManage ? "" : "disabled") />
+            </div>
+            <div class="col-md-6">
+                <button class="btn btn-outline-primary lw-btn" type="submit" data-loading-text="Sending..." @(canManage ? "" : "disabled")>
+                    <i class="bi bi-send me-1"></i>Send test email
+                </button>
+            </div>
+        </div>
+    </div>
+</form>

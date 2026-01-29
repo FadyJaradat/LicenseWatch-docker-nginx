@@ -1,0 +1,431 @@
+@model LicenseWatch.Web.Models.Admin.AuditListViewModel
+@{
+    ViewData["Title"] = "Audit";
+    var totalPages = (int)Math.Ceiling(Model.TotalCount / (double)Math.Max(Model.PageSize, 1));
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Audit log",
+        Subtitle = "Track security-sensitive actions and system changes.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/security">
+                <i class="bi bi-shield-check me-1"></i>Security
+            </a>
+        </text>
+    };
+    var filterModel = new FilterBarViewModel
+    {
+        Label = "Quick range",
+        Filters = new List<FilterPillViewModel>
+        {
+            new() { Label = "Today", Url = Url.Action("Index", new { rangeDays = 1 }) ?? "#", IsActive = Model.RangeDays == 1 },
+            new() { Label = "7 days", Url = Url.Action("Index", new { rangeDays = 7 }) ?? "#", IsActive = Model.RangeDays == 7 },
+            new() { Label = "30 days", Url = Url.Action("Index", new { rangeDays = 30 }) ?? "#", IsActive = Model.RangeDays == 30 }
+        },
+        ClearUrl = Url.Action("Index") ?? "#"
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<div class="mb-4">
+    <partial name="_FilterBar" model="filterModel" />
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "audit" ? "active" : "")" href="/admin/audit?tab=audit">Audit trail</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "system" ? "active" : "")" href="/admin/audit?tab=system">System logs</a>
+    </li>
+</ul>
+
+@if (Model.ActiveTab == "audit")
+{
+<form method="get" class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Action</label>
+                <select class="form-select" name="actionKey">
+                    <option value="">All actions</option>
+                    @foreach (var option in Model.ActionOptions)
+                    {
+                        <option value="@option" selected="@(option == Model.Action ? "selected" : null)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Entity</label>
+                <select class="form-select" name="entityType">
+                    <option value="">All entities</option>
+                    @foreach (var option in Model.EntityTypeOptions)
+                    {
+                        <option value="@option" selected="@(option == Model.EntityType ? "selected" : null)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Search</label>
+                <input class="form-control" name="search" value="@Model.Search" placeholder="Actor or summary" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Correlation ID</label>
+                <input class="form-control" name="correlationId" value="@Model.CorrelationId" placeholder="Filter by correlation" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">From (UTC)</label>
+                <input type="datetime-local" class="form-control" name="fromUtc" value="@(Model.FromUtc?.ToString("yyyy-MM-ddTHH:mm"))" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">To (UTC)</label>
+                <input type="datetime-local" class="form-control" name="toUtc" value="@(Model.ToUtc?.ToString("yyyy-MM-ddTHH:mm"))" />
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary lw-btn" type="submit"><i class="bi bi-search me-1"></i>Filter</button>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/audit"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</a>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/audit/export?actionKey=@Model.Action&entityType=@Model.EntityType&correlationId=@Model.CorrelationId&search=@Model.Search&fromUtc=@Model.FromUtc&toUtc=@Model.ToUtc&rangeDays=@Model.RangeDays">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </a>
+        </div>
+    </div>
+</form>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 fw-semibold mb-0">Recent activity</h2>
+            <span class="badge bg-light text-muted border">Total @Model.TotalCount</span>
+        </div>
+        @if (!Model.Logs.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-journal-text",
+                Title = "No audit entries found",
+                Message = "Try clearing the filters or perform an admin action to generate new audit events.",
+                PrimaryCta = new CtaViewModel
+                {
+                    Label = "Clear filters",
+                    Url = "/admin/audit",
+                    Icon = "bi-arrow-counterclockwise"
+                },
+                SecondaryCta = new CtaViewModel
+                {
+                    Label = "Go to dashboard",
+                    Url = "/admin",
+                    Icon = "bi-speedometer2"
+                }
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>Actor</th>
+                            <th>Action</th>
+                            <th>Entity</th>
+                            <th>Summary</th>
+                            <th>Correlation</th>
+                            <th>Result</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var rowIndex = 0;
+                        }
+                        @foreach (var log in Model.Logs)
+                        {
+                            var modalId = $"audit-detail-{rowIndex++}";
+                            <tr>
+                                <td class="text-muted small">@log.OccurredAtUtc.ToLocalTime().ToString("g")</td>
+                                <td>
+                                    <div class="fw-semibold">@log.ActorDisplay</div>
+                                    @if (!string.IsNullOrWhiteSpace(log.ActorEmail) && !string.Equals(log.ActorDisplay, log.ActorEmail, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <div class="text-muted small">@log.ActorEmail</div>
+                                    }
+                                    @if (log.IsImpersonated && !string.IsNullOrWhiteSpace(log.ActingAs))
+                                    {
+                                        <div class="text-muted small">Acting as @log.ActingAs</div>
+                                        <span class="badge bg-warning-subtle text-warning">Impersonated</span>
+                                    }
+                                </td>
+                                <td><span class="badge @SeverityBadge(log.Severity)">@log.Action</span></td>
+                                <td class="text-muted">@log.EntityType</td>
+                                <td>
+                                    <div class="fw-semibold">@log.Summary</div>
+                                    <div class="text-muted small">Entity: @log.EntityType @log.EntityIdDisplay</div>
+                                </td>
+                                <td class="text-muted small">
+                                    @if (!string.IsNullOrWhiteSpace(log.CorrelationId))
+                                    {
+                                        <span class="font-monospace">@log.CorrelationId</span>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @OutcomeBadge(log.Outcome)">@log.Outcome</span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" data-bs-toggle="modal" data-bs-target="#@modalId">
+                                        Details
+                                    </button>
+                                </td>
+                            </tr>
+                            <div class="modal fade" id="@modalId" tabindex="-1" aria-labelledby="@modalId-label" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="@modalId-label">Audit details</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <div class="text-muted small text-uppercase">Action</div>
+                                                    <div class="fw-semibold">@log.Action</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="text-muted small text-uppercase">Outcome</div>
+                                                    <div><span class="badge @OutcomeBadge(log.Outcome)">@log.Outcome</span></div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="text-muted small text-uppercase">Actor</div>
+                                                    <div class="fw-semibold">@log.ActorDisplay</div>
+                                                    @if (!string.IsNullOrWhiteSpace(log.ActorEmail) && !string.Equals(log.ActorDisplay, log.ActorEmail, StringComparison.OrdinalIgnoreCase))
+                                                    {
+                                                        <div class="text-muted small">@log.ActorEmail</div>
+                                                    }
+                                                    @if (log.IsImpersonated && !string.IsNullOrWhiteSpace(log.ActingAs))
+                                                    {
+                                                        <div class="text-muted small">Acting as @log.ActingAs</div>
+                                                    }
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="text-muted small text-uppercase">When</div>
+                                                    <div>@log.OccurredAtUtc.ToLocalTime().ToString("f")</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="text-muted small text-uppercase">Correlation ID</div>
+                                                    <div class="font-monospace">@(!string.IsNullOrWhiteSpace(log.CorrelationId) ? log.CorrelationId : "—")</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="text-muted small text-uppercase">Entity</div>
+                                                    <div>@log.EntityType</div>
+                                                    <div class="text-muted small">@log.EntityIdDisplay</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="text-muted small text-uppercase">Source IP</div>
+                                                    <div>@log.IpAddressDisplay</div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="text-muted small text-uppercase">Summary</div>
+                                                    <div>@log.Summary</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-light lw-btn" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (totalPages > 1)
+            {
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <span class="text-muted small">Page @Model.Page of @totalPages</span>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-sm btn-outline-secondary lw-btn @(Model.Page <= 1 ? "disabled" : "")"
+                           href="/admin/audit?tab=audit&page=@(Model.Page - 1)&actionKey=@Model.Action&entityType=@Model.EntityType&correlationId=@Model.CorrelationId&search=@Model.Search&fromUtc=@Model.FromUtc&toUtc=@Model.ToUtc&rangeDays=@Model.RangeDays">
+                            Previous
+                        </a>
+                        <a class="btn btn-sm btn-outline-secondary lw-btn @(Model.Page >= totalPages ? "disabled" : "")"
+                           href="/admin/audit?tab=audit&page=@(Model.Page + 1)&actionKey=@Model.Action&entityType=@Model.EntityType&correlationId=@Model.CorrelationId&search=@Model.Search&fromUtc=@Model.FromUtc&toUtc=@Model.ToUtc&rangeDays=@Model.RangeDays">
+                            Next
+                        </a>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+}
+else
+{
+    <div class="card lw-card shadow-sm border-0">
+        <div class="card-body lw-card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h6 fw-semibold mb-0">System logs</h2>
+                <span class="badge bg-light text-muted border">Last 200 events</span>
+            </div>
+            @if (!Model.SystemLogs.Any())
+            {
+                var emptyState = new EmptyStateViewModel
+                {
+                    Icon = "bi-activity",
+                    Title = "No system logs yet",
+                    Message = "Job runs, email deliveries, and operational events will appear here.",
+                    PrimaryCta = new CtaViewModel
+                    {
+                        Label = "Run a job",
+                        Url = "/admin/jobs",
+                        Icon = "bi-play-circle"
+                    }
+                };
+                <partial name="_EmptyState" model="emptyState" />
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>Source</th>
+                            <th>Actor</th>
+                            <th>Status</th>
+                            <th>Summary</th>
+                            <th>Correlation</th>
+                            <th>Detail</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var sysIndex = 0;
+                            }
+                            @foreach (var log in Model.SystemLogs)
+                            {
+                                var modalId = $"system-log-{sysIndex++}";
+                                <tr>
+                                    <td class="text-muted small">@log.OccurredAtUtc.ToLocalTime().ToString("g")</td>
+                                    <td>@log.Source</td>
+                                    <td>
+                                        <div class="fw-semibold">@log.Actor</div>
+                                        @if (log.IsImpersonated && !string.IsNullOrWhiteSpace(log.ActingAs))
+                                        {
+                                            <div class="text-muted small">Acting as @log.ActingAs</div>
+                                            <span class="badge bg-warning-subtle text-warning">Impersonated</span>
+                                        }
+                                    </td>
+                                    <td><span class="badge @OutcomeBadge(log.Status)">@log.Status</span></td>
+                                    <td class="fw-semibold">@log.Summary</td>
+                                    <td class="text-muted small">
+                                        @if (!string.IsNullOrWhiteSpace(log.CorrelationId))
+                                        {
+                                            <span class="font-monospace">@log.CorrelationId</span>
+                                        }
+                                        else
+                                        {
+                                            <span>—</span>
+                                        }
+                                    </td>
+                                    <td class="text-muted">@(!string.IsNullOrWhiteSpace(log.DetailDisplay) ? log.DetailDisplay : "—")</td>
+                                    <td class="text-end">
+                                        @if (!string.IsNullOrWhiteSpace(log.DetailDisplay))
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" data-bs-toggle="modal" data-bs-target="#@modalId">
+                                                Details
+                                            </button>
+                                            <div class="modal fade" id="@modalId" tabindex="-1" aria-labelledby="@modalId-label" aria-hidden="true">
+                                                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="@modalId-label">System log detail</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="row g-3">
+                                                                <div class="col-md-6">
+                                                                    <div class="text-muted small text-uppercase">Source</div>
+                                                                    <div class="fw-semibold">@log.Source</div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="text-muted small text-uppercase">Status</div>
+                                                                    <div><span class="badge @OutcomeBadge(log.Status)">@log.Status</span></div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="text-muted small text-uppercase">Actor</div>
+                                                                    <div class="fw-semibold">@log.Actor</div>
+                                                                    @if (log.IsImpersonated && !string.IsNullOrWhiteSpace(log.ActingAs))
+                                                                    {
+                                                                        <div class="text-muted small">Acting as @log.ActingAs</div>
+                                                                    }
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="text-muted small text-uppercase">When</div>
+                                                                    <div>@log.OccurredAtUtc.ToLocalTime().ToString("f")</div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="text-muted small text-uppercase">Correlation ID</div>
+                                                                    <div class="font-monospace">@(!string.IsNullOrWhiteSpace(log.CorrelationId) ? log.CorrelationId : "—")</div>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <div class="text-muted small text-uppercase">Summary</div>
+                                                                    <div class="fw-semibold">@log.Summary</div>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <div class="text-muted small text-uppercase">Detail</div>
+                                                                    <pre class="small mb-0">@log.DetailDisplay</pre>
+                                                                    @if (log.IsRedacted && !string.IsNullOrWhiteSpace(log.RedactionReason))
+                                                                    {
+                                                                        <div class="text-muted small mt-1">@log.RedactionReason</div>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light lw-btn" data-bs-dismiss="modal">Close</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@functions {
+    private static string OutcomeBadge(string outcome)
+        => outcome switch
+        {
+            "Failed" => "bg-danger-subtle text-danger",
+            "Success" => "bg-success-subtle text-success",
+            _ => "bg-light text-muted border"
+        };
+
+    private static string SeverityBadge(string severity)
+        => severity switch
+        {
+            "Critical" => "bg-danger-subtle text-danger",
+            "Warning" => "bg-warning-subtle text-warning",
+            _ => "bg-info-subtle text-info"
+        };
+}

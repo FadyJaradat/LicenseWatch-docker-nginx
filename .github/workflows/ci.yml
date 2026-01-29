@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        run: dotnet test -c Release --no-build
+
+      - name: Docker build
+        run: docker build -t licensewatch:ci .
+
+      - name: Docker smoke test
+        run: |
+          docker run -d --rm -p 8080:8080 --name licensewatch-ci -e ASPNETCORE_ENVIRONMENT=Production licensewatch:ci
+          for i in {1..10}; do
+            if curl -fsS http://localhost:8080/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs licensewatch-ci
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f licensewatch-ci || true

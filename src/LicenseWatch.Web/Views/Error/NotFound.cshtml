@@ -1,0 +1,19 @@
+@model LicenseWatch.Web.Models.ErrorPageViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    var emptyState = new EmptyStateViewModel
+    {
+        Icon = "bi-compass",
+        Title = Model.Title,
+        Message = Model.Message,
+        PrimaryCta = new CtaViewModel { Label = "Return home", Url = Url.Content("~/") ?? "/" },
+        SecondaryCta = new CtaViewModel { Label = "Go to dashboard", Url = "/admin" }
+    };
+}
+
+<section class="fade-up">
+    <div class="text-center mb-4">
+        <partial name="_Logo" model="@("lw-logo--lg")" />
+    </div>
+    <partial name="_EmptyState" model="emptyState" />
+</section>

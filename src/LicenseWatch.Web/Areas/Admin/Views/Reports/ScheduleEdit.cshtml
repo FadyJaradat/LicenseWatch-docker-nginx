@@ -1,0 +1,127 @@
+@model LicenseWatch.Web.Models.Admin.ReportScheduleEditorViewModel
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.Key) ? "Create schedule" : "Edit schedule";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = string.IsNullOrWhiteSpace(Model.Key) ? "Create schedule" : "Edit schedule",
+        Subtitle = "Schedule report delivery with a reliable cadence and clear recipients.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Schedules">
+                <i class="bi bi-arrow-left me-1"></i>Back to schedules
+            </a>
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <div class="small text-muted mt-1">@Model.AlertDetails</div>
+            </details>
+        }
+    </div>
+}
+
+<form method="post" asp-action="SaveSchedule" class="row g-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Key" value="@Model.Key" />
+    <div class="col-lg-7">
+        <div class="card lw-card shadow-sm border-0">
+            <div class="card-body lw-card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Schedule name</label>
+                    <input class="form-control" name="Name" value="@Model.Name" placeholder="e.g., Monthly compliance report" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Report</label>
+                    <select class="form-select" name="ReportKey">
+                        @foreach (var report in Model.Reports)
+                        {
+                            <option value="@report.Key" selected="@(Model.ReportKey == report.Key)">@report.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Preset filters (optional)</label>
+                    <select class="form-select" name="PresetId">
+                        <option value="">Use current filters</option>
+                        @foreach (var preset in Model.Presets)
+                        {
+                            <option value="@preset.Id" selected="@(Model.PresetId == preset.Id)">@preset.Name</option>
+                        }
+                    </select>
+                    <div class="text-muted small mt-1">Save presets from report pages to reuse them here.</div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Format</label>
+                        <select class="form-select" name="Format">
+                            <option value="csv" selected="@(Model.Format == "csv")">CSV</option>
+                            <option value="excel" selected="@(Model.Format == "excel")">Excel</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Recipients</label>
+                        <input class="form-control" name="Recipients" value="@Model.Recipients" placeholder="ops@example.com, exec@example.com" />
+                    </div>
+                </div>
+                <div class="mb-3 mt-3">
+                    <label class="form-label fw-semibold">Cron schedule</label>
+                    <input class="form-control" name="CronExpression" value="@Model.CronExpression" placeholder="0 6 * * *" />
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var preset in Model.CronPresets)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" data-cron-preset="@preset.Expression">@preset.Label</button>
+                    }
+                </div>
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" name="IsEnabled" value="true" @(Model.IsEnabled ? "checked" : "") />
+                    <label class="form-check-label">Enabled</label>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-primary lw-btn" type="submit" data-loading-text="Saving...">
+                        <i class="bi bi-save me-1"></i>Save schedule
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card lw-card shadow-sm border-0 mb-3">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Next runs (UTC)</h2>
+                @if (!Model.NextRuns.Any())
+                {
+                    <div class="text-muted small">Enter a valid cron expression to preview upcoming runs.</div>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var run in Model.NextRuns)
+                        {
+                            <li class="small text-muted">@run</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+        <div class="card lw-card shadow-sm border-0">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Tips</h2>
+                <ul class="text-muted small mb-0">
+                    <li>Use presets to reapply complex filters.</li>
+                    <li>Include multiple recipients separated by commas.</li>
+                    <li>Report files are attached to the email.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</form>

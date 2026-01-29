@@ -1,0 +1,94 @@
+@model LicenseWatch.Web.Models.Admin.EmailTemplateListViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Email templates";
+    ViewData["EmailNav"] = "templates";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.EmailManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Email templates",
+        Subtitle = "Manage messaging with consistent templates."
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+<partial name="_EmailNav" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        @if (!Model.Templates.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-envelope",
+                Title = "No templates configured",
+                Message = "Templates are seeded on startup. Ensure migrations ran and refresh to reload defaults.",
+                PrimaryCta = new CtaViewModel
+                {
+                    Label = "Check migrations",
+                    Url = "/admin/migrations",
+                    Icon = "bi-layers"
+                },
+                SecondaryCta = new CtaViewModel
+                {
+                    Label = "Email settings",
+                    Url = "/admin/email",
+                    Icon = "bi-envelope-paper-heart"
+                }
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Key</th>
+                            <th>Status</th>
+                            <th>Updated</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var template in Model.Templates)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@template.Name</td>
+                                <td class="text-muted small">@template.Key</td>
+                                <td>
+                                    <span class="badge @(template.IsEnabled ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary")">
+                                        @(template.IsEnabled ? "Enabled" : "Disabled")
+                                    </span>
+                                </td>
+                                <td class="text-muted small">@template.UpdatedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td class="text-end">
+                                    @if (canManage)
+                                    {
+                                        <a class="btn btn-sm btn-outline-primary lw-btn" asp-action="EditTemplate" asp-route-id="@template.Id">Edit</a>
+                                        <form asp-action="ToggleTemplate" asp-route-id="@template.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button class="btn btn-sm btn-outline-secondary lw-btn" type="submit">@(template.IsEnabled ? "Disable" : "Enable")</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage templates.">Edit</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

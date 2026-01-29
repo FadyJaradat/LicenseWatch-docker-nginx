@@ -1,0 +1,59 @@
+@model InsightCardViewModel
+@{
+    var severity = Model.Severity.ToLowerInvariant();
+}
+
+<div class="lw-card lw-insight lw-insight--@severity">
+    <div class="lw-insight__header">
+        <span class="badge lw-badge lw-badge--@severity">@Model.Severity</span>
+    </div>
+    <div class="lw-insight__title">@Model.Title</div>
+    @if (!string.IsNullOrWhiteSpace(Model.Description))
+    {
+        <div class="lw-insight__description">@Model.Description</div>
+    }
+    @if (Model.Evidence.Count > 0)
+    {
+        <ul class="lw-insight__evidence">
+            @foreach (var item in Model.Evidence)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    }
+    @if (Model.PrimaryCta is not null || Model.SecondaryCta is not null)
+    {
+        <div class="lw-insight__actions">
+            @if (Model.PrimaryCta is not null)
+            {
+                <a class="btn btn-sm lw-btn @CtaClass(Model.PrimaryCta.Style)" href="@Model.PrimaryCta.Url">
+                    @if (!string.IsNullOrWhiteSpace(Model.PrimaryCta.Icon))
+                    {
+                        <i class="bi @Model.PrimaryCta.Icon me-1"></i>
+                    }
+                    @Model.PrimaryCta.Label
+                </a>
+            }
+            @if (Model.SecondaryCta is not null)
+            {
+                <a class="btn btn-sm lw-btn @CtaClass(Model.SecondaryCta.Style)" href="@Model.SecondaryCta.Url">
+                    @if (!string.IsNullOrWhiteSpace(Model.SecondaryCta.Icon))
+                    {
+                        <i class="bi @Model.SecondaryCta.Icon me-1"></i>
+                    }
+                    @Model.SecondaryCta.Label
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@functions {
+    private static string CtaClass(string? style)
+        => style?.ToLowerInvariant() switch
+        {
+            "secondary" => "btn-outline-secondary",
+            "ghost" => "btn-outline-primary",
+            _ => "btn-primary"
+        };
+}

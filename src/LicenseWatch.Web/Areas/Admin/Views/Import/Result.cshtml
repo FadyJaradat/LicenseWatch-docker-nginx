@@ -1,0 +1,41 @@
+@model LicenseWatch.Web.Models.Admin.ImportResultViewModel
+@{
+    ViewData["Title"] = "Import result";
+}
+
+<div class="lw-page-header mb-4 fade-up">
+    <div>
+        <p class="text-uppercase text-muted small mb-1">Admin area</p>
+        <h1 class="h3 fw-semibold mb-0">Import complete</h1>
+        <p class="text-secondary mb-0">Processed @Model.TotalRows rows from @Model.OriginalFileName.</p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left me-1"></i>Back to import</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="metric-tile">
+            <div class="text-muted small">New licenses</div>
+            <div class="h4 fw-semibold mb-0">@Model.NewLicenses</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-tile">
+            <div class="text-muted small">Updated licenses</div>
+            <div class="h4 fw-semibold mb-0">@Model.UpdatedLicenses</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-tile">
+            <div class="text-muted small">New categories</div>
+            <div class="h4 fw-semibold mb-0">@Model.NewCategories</div>
+        </div>
+    </div>
+</div>
+
+<div class="card lw-card shadow-sm border-0 mt-4">
+    <div class="card-body lw-card-body">
+        <p class="text-secondary mb-0">Completed at: @(Model.CompletedAtUtc?.ToLocalTime().ToString("g") ?? "-")</p>
+    </div>
+</div>
+

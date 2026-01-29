@@ -1,0 +1,92 @@
+@model LicenseWatch.Web.Models.Admin.EmailTemplateEditViewModel
+@{
+    ViewData["Title"] = "Edit template";
+    ViewData["EmailNav"] = "templates";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Edit template",
+        Subtitle = "Update subject and body, then preview.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Templates">
+                <i class="bi bi-arrow-left me-1"></i>Back to templates
+            </a>
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<partial name="_EmailNav" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<form method="post" class="row g-4">
+    @Html.AntiForgeryToken()
+    <div class="col-lg-7">
+        <div class="card lw-card shadow-sm border-0">
+            <div class="card-body lw-card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Name</label>
+                    <input class="form-control" name="Name" value="@Model.Name" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Key</label>
+                    <input class="form-control" value="@Model.Key" disabled />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Subject template</label>
+                    <input class="form-control" name="SubjectTemplate" value="@Model.SubjectTemplate" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">HTML body</label>
+                    <textarea class="form-control" name="BodyHtmlTemplate" rows="8">@Model.BodyHtmlTemplate</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Text body</label>
+                    <textarea class="form-control" name="BodyTextTemplate" rows="5">@Model.BodyTextTemplate</textarea>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="IsEnabled" value="true" @(Model.IsEnabled ? "checked" : "") />
+                    <label class="form-check-label">Enabled</label>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary lw-btn" type="submit" name="action" value="preview">Update preview</button>
+                    <button class="btn btn-primary lw-btn" type="submit" name="action" value="save">Save template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card lw-card shadow-sm border-0 mb-3">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Available tokens</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var token in Model.AvailableTokens)
+                    {
+                        <span class="badge bg-light text-muted border">@token</span>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="card lw-card shadow-sm border-0">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Preview</h2>
+                <p class="text-muted small">Subject: <span class="fw-semibold">@Model.PreviewSubject</span></p>
+                <div class="border rounded p-3 bg-white mb-3" style="min-height: 180px;">
+                    @Html.Raw(Model.PreviewHtml)
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.PreviewText))
+                {
+                    <pre class="small bg-light p-3 rounded">@Model.PreviewText</pre>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+

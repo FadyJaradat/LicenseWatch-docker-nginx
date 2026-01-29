@@ -1,0 +1,23 @@
+@model PageHeaderViewModel
+
+<div class="lw-page-header mb-4">
+    <div>
+        <div class="lw-page-title">@Model.Title</div>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+        {
+            <div class="lw-page-subtitle">@Model.Subtitle</div>
+        }
+    </div>
+    <div class="lw-page-meta">
+        @if (!string.IsNullOrWhiteSpace(Model.UpdatedLabel))
+        {
+            <div class="lw-page-updated">@Model.UpdatedLabel</div>
+        }
+        @if (Model.Actions is not null)
+        {
+            <div class="lw-page-actions">
+                @Model.Actions.Invoke(new object())
+            </div>
+        }
+    </div>
+</div>

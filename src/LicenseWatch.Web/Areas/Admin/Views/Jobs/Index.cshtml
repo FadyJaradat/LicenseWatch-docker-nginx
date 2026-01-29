@@ -1,0 +1,317 @@
+@model LicenseWatch.Web.Models.Admin.JobsViewModel
+@{
+    ViewData["Title"] = "Jobs";
+    var coreJobs = Model.Jobs.Where(job => !job.IsCustom).ToList();
+    var customJobs = Model.Jobs.Where(job => job.IsCustom).ToList();
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Job scheduler",
+        Subtitle = "Manage recurring workflows and run jobs on demand.",
+        Actions = @<text>
+            @if (Model.CanManageCustomJobs)
+            {
+                <a class="btn btn-outline-secondary lw-btn" asp-action="Create">
+                    <i class="bi bi-plus-circle me-1"></i>Create job
+                </a>
+                <a class="btn btn-outline-secondary lw-btn" href="/admin/hangfire" target="_blank" rel="noopener">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Hangfire console
+                </a>
+            }
+            else
+            {
+                <button class="btn btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to create custom jobs.">
+                    <i class="bi bi-plus-circle me-1"></i>Create job
+                </button>
+                <a class="btn btn-outline-secondary lw-btn" href="/admin/hangfire" target="_blank" rel="noopener">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Hangfire console
+                </a>
+            }
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<div class="card lw-card shadow-sm border-0 mb-4" id="job-cards">
+    <div class="card-body lw-card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2 class="h6 fw-semibold mb-1">Core jobs</h2>
+                <p class="text-muted small mb-0">Built-in schedules that keep LicenseWatch data current.</p>
+            </div>
+            <span class="badge bg-light text-muted border">@coreJobs.Count jobs</span>
+        </div>
+        <div class="row g-3 align-items-stretch">
+            @foreach (var job in coreJobs)
+            {
+                <div class="col-lg-4">
+                    <div class="card lw-card shadow-sm border-0 h-100">
+                        <div class="card-body lw-card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h3 class="h6 fw-semibold mb-1">@job.Name</h3>
+                                    <p class="text-secondary small mb-0">@job.Description</p>
+                                </div>
+                                <span class="badge @StatusBadge(job.LastStatus) lw-status-pulse" data-status="@StatusTone(job.LastStatus)">
+                                    @FormatStatus(job.LastStatus, job.IsEnabled)
+                                </span>
+                            </div>
+                            <div class="text-secondary small">Schedule: @job.ScheduleLabel</div>
+                            <div class="text-secondary small">Last run: @FormatDate(job.LastRunUtc)</div>
+                            <div class="text-secondary small lw-job-next">Next run: @FormatDate(job.NextRunUtc)</div>
+                            @if (!string.IsNullOrWhiteSpace(job.LastSummary))
+                            {
+                                <div class="text-secondary small mt-2">@job.LastSummary</div>
+                            }
+                            @if (string.Equals(job.LastStatus, "Failed", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(job.LastError))
+                            {
+                                <details class="lw-details mt-2">
+                                    <summary>View last error</summary>
+                                    <pre class="small mb-0">@job.LastError</pre>
+                                </details>
+                            }
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <form asp-action="Run" asp-route-jobKey="@job.Key" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-sm btn-primary lw-btn"
+                                            type="submit"
+                                            data-loading-text="Running..."
+                                            @(Model.CanRun ? "" : "disabled")>
+                                        Run now
+                                    </button>
+                                </form>
+                                @if (Model.CanManageSchedules)
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary lw-btn" asp-action="Edit" asp-route-jobKey="@job.Key">
+                                        Edit schedule
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage schedules.">
+                                        Edit schedule
+                                    </button>
+                                }
+                                <form asp-action="Toggle" asp-route-jobKey="@job.Key" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="enable" value="@(!job.IsEnabled)" />
+                                    <button class="btn btn-sm btn-outline-secondary lw-btn"
+                                            type="submit"
+                                            data-loading-text="Updating..."
+                                            @(Model.CanManageSchedules ? "" : "disabled")>
+                                        @(job.IsEnabled ? "Pause" : "Resume")
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2 class="h6 fw-semibold mb-1">Custom jobs</h2>
+                <p class="text-muted small mb-0">Operator-defined schedules for specialized workflows.</p>
+            </div>
+            <span class="badge bg-light text-muted border">@customJobs.Count jobs</span>
+        </div>
+        @if (customJobs.Count == 0)
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-clock-history",
+                Title = "No custom jobs yet",
+                Message = "Create a custom schedule to automate compliance checks, usage refreshes, or notification runs.",
+                PrimaryCta = new CtaViewModel
+                {
+                    Label = Model.CanManageCustomJobs ? "Create custom job" : "Custom jobs require permission",
+                    Url = Model.CanManageCustomJobs ? (Url.Action("Create") ?? "#") : "#",
+                    Icon = "bi-plus-circle"
+                }
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="row g-3 align-items-stretch">
+                @foreach (var job in customJobs)
+                {
+                    <div class="col-lg-4">
+                        <div class="card lw-card shadow-sm border-0 h-100">
+                            <div class="card-body lw-card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h3 class="h6 fw-semibold mb-1">@job.Name</h3>
+                                        <p class="text-secondary small mb-0">@job.Description</p>
+                                    </div>
+                                    <span class="badge @StatusBadge(job.LastStatus) lw-status-pulse" data-status="@StatusTone(job.LastStatus)">
+                                        @FormatStatus(job.LastStatus, job.IsEnabled)
+                                    </span>
+                                </div>
+                                <div class="text-secondary small">Schedule: @job.ScheduleLabel</div>
+                                <div class="text-secondary small">Last run: @FormatDate(job.LastRunUtc)</div>
+                                <div class="text-secondary small lw-job-next">Next run: @FormatDate(job.NextRunUtc)</div>
+                                @if (!string.IsNullOrWhiteSpace(job.LastSummary))
+                                {
+                                    <div class="text-secondary small mt-2">@job.LastSummary</div>
+                                }
+                                @if (string.Equals(job.LastStatus, "Failed", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(job.LastError))
+                                {
+                                    <details class="lw-details mt-2">
+                                        <summary>View last error</summary>
+                                        <pre class="small mb-0">@job.LastError</pre>
+                                    </details>
+                                }
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <form asp-action="Run" asp-route-jobKey="@job.Key" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn btn-sm btn-primary lw-btn"
+                                                type="submit"
+                                                data-loading-text="Running..."
+                                                @(Model.CanRun ? "" : "disabled")>
+                                            Run now
+                                        </button>
+                                    </form>
+                                    @if (Model.CanManageSchedules)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary lw-btn" asp-action="Edit" asp-route-jobKey="@job.Key">
+                                            Edit schedule
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage schedules.">
+                                            Edit schedule
+                                        </button>
+                                    }
+                                    <form asp-action="Toggle" asp-route-jobKey="@job.Key" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="enable" value="@(!job.IsEnabled)" />
+                                        <button class="btn btn-sm btn-outline-secondary lw-btn"
+                                                type="submit"
+                                                data-loading-text="Updating..."
+                                                @(Model.CanManageSchedules ? "" : "disabled")>
+                                            @(job.IsEnabled ? "Pause" : "Resume")
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <h2 class="h6 fw-semibold mb-3">Job history</h2>
+        @if (!Model.History.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-activity",
+                Title = "No job executions yet",
+                Message = "Run a job to populate history and verify the scheduler is active.",
+                PrimaryCta = new CtaViewModel
+                {
+                    Label = "Run a job now",
+                    Url = "#job-cards",
+                    Icon = "bi-play-circle"
+                },
+                SecondaryCta = new CtaViewModel
+                {
+                    Label = "Open Hangfire",
+                    Url = "/admin/hangfire",
+                    Icon = "bi-box-arrow-up-right"
+                }
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Job</th>
+                            <th>Started</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Summary</th>
+                            <th>Correlation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.History)
+                        {
+                            <tr>
+                                <td>@item.JobName</td>
+                                <td class="text-muted small">@item.StartedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td class="text-muted small">@item.DurationLabel</td>
+                                <td><span class="badge @StatusBadge(item.Status) lw-status-pulse" data-status="@StatusTone(item.Status)">@item.Status</span></td>
+                                <td class="text-secondary">@item.Summary</td>
+                                <td class="text-muted small">
+                                    @if (!string.IsNullOrWhiteSpace(item.CorrelationId))
+                                    {
+                                        <span class="font-monospace">@item.CorrelationId</span>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private static string FormatDate(DateTime? value)
+        => value.HasValue ? value.Value.ToLocalTime().ToString("g") : "-";
+
+    private static string FormatStatus(string? status, bool isEnabled)
+    {
+        if (!isEnabled)
+        {
+            return "Paused";
+        }
+
+        return string.IsNullOrWhiteSpace(status) ? "Unknown" : status;
+    }
+
+    private static string StatusBadge(string? status)
+        => status switch
+        {
+            "Success" => "bg-success-subtle text-success",
+            "Failed" => "bg-danger-subtle text-danger",
+            "Running" => "bg-info-subtle text-info",
+            _ => "bg-light text-muted border"
+        };
+
+    private static string StatusTone(string? status)
+        => status switch
+        {
+            "Success" => "success",
+            "Failed" => "danger",
+            "Running" => "warning",
+            _ => "warning"
+        };
+}

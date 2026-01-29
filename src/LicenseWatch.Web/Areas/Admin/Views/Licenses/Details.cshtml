@@ -1,0 +1,210 @@
+@model LicenseWatch.Web.Models.Admin.LicenseDetailViewModel
+@{
+    ViewData["Title"] = "License details";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = Model.Name,
+        Subtitle = Model.CategoryName,
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Edit" asp-route-id="@Model.Id">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-danger lw-btn" type="submit" data-loading-text="Deleting...">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+            </form>
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <div class="small text-muted mt-1">@Model.AlertDetails</div>
+            </details>
+        }
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Status</div>
+            <div class="h5 fw-semibold mb-0">@Model.Status</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Expires</div>
+            <div class="h5 fw-semibold mb-0">@(Model.ExpiresOnUtc?.ToString("yyyy-MM-dd") ?? "-")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Seats purchased</div>
+            <div class="h5 fw-semibold mb-0">@(Model.SeatsPurchased?.ToString() ?? "-")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Seats assigned</div>
+            <div class="h5 fw-semibold mb-0">@(Model.SeatsAssigned?.ToString() ?? "-")</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="metric-tile">
+            <div class="text-muted small">Compliance last evaluated</div>
+            <div class="h6 fw-semibold mb-0">@(Model.LastEvaluatedAtUtc?.ToLocalTime().ToString("g") ?? "-")</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="metric-tile">
+            <div class="text-muted small">Compliance thresholds</div>
+            <div class="h6 fw-semibold mb-0">@Model.ThresholdLabel</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 align-items-stretch lw-license-details">
+    <div class="col-lg-7 d-flex flex-column gap-3">
+        <div class="card lw-card shadow-sm border-0">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-3">Details</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="text-muted small">Vendor</div>
+                        <div class="fw-semibold">@(Model.Vendor ?? "-")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">Cost per seat</div>
+                        <div class="fw-semibold">@(Model.CostPerSeatMonthly.HasValue ? $"{(string.IsNullOrWhiteSpace(Model.Currency) ? "USD" : Model.Currency)} {Model.CostPerSeatMonthly:0.##}" : "-")</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Notes</div>
+                        <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.Notes) ? "-" : Model.Notes)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card lw-card shadow-sm border-0 flex-grow-1">
+            <div class="card-body lw-card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 fw-semibold mb-0">Attachments</h2>
+                    <form asp-action="UploadAttachment" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="d-flex gap-2" id="upload-attachment">
+                        @Html.AntiForgeryToken()
+                        <input type="file" class="form-control form-control-sm" name="file" />
+                        <button class="btn btn-sm btn-primary" type="submit" data-loading-text="Uploading...">Upload</button>
+                    </form>
+                </div>
+                @if (!Model.Attachments.Any())
+                {
+                    <div class="lw-empty-inline">
+                        <span class="lw-empty-inline__icon"><i class="bi bi-paperclip"></i></span>
+                        <div class="text-muted small">No attachments yet. Upload a contract or renewal notice for this license.</div>
+                        <a class="btn btn-sm btn-outline-secondary" href="#upload-attachment">Upload attachment</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>File</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Uploaded</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var attachment in Model.Attachments)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@attachment.OriginalFileName</td>
+                                        <td class="text-muted small">@attachment.ContentType</td>
+                                        <td class="text-muted small">@FormatBytes(attachment.SizeBytes)</td>
+                                        <td class="text-muted small">@attachment.UploadedAtUtc.ToLocalTime().ToString("g")</td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm btn-outline-primary" asp-action="DownloadAttachment" asp-route-id="@Model.Id" asp-route-attachmentId="@attachment.Id">Download</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5 d-flex">
+        <div class="card lw-card shadow-sm border-0 flex-grow-1">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-3">Recent activity</h2>
+                @if (!Model.AuditLogs.Any())
+                {
+                    <div class="lw-empty-inline">
+                        <span class="lw-empty-inline__icon"><i class="bi bi-activity"></i></span>
+                        <div class="text-muted small">No activity logged yet. Updates and uploads will appear here.</div>
+                        <a class="btn btn-sm btn-outline-secondary" href="/admin/audit">View audit log</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var log in Model.AuditLogs)
+                        {
+                            <div class="list-group-item">
+                                <div class="fw-semibold">@log.Summary</div>
+                                <div class="text-muted small">
+                                    @log.Action &middot; @log.ActorDisplay
+                                    @if (!string.IsNullOrWhiteSpace(log.ActorEmail) && !string.Equals(log.ActorDisplay, log.ActorEmail, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="text-muted">(@log.ActorEmail)</span>
+                                    }
+                                    @if (log.IsImpersonated && !string.IsNullOrWhiteSpace(log.ActingAs))
+                                    {
+                                        <span> (acting as @log.ActingAs)</span>
+                                    }
+                                    &middot; @log.OccurredAtUtc.ToLocalTime().ToString("g")
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024d:0.0} KB";
+        }
+
+        return $"{bytes / (1024d * 1024d):0.0} MB";
+    }
+}
+
+

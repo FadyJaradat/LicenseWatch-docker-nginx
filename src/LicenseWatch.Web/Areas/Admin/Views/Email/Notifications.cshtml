@@ -1,0 +1,96 @@
+@model LicenseWatch.Web.Models.Admin.EmailNotificationSettingsViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Email notifications";
+    ViewData["EmailNav"] = "notifications";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.EmailManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Email notifications",
+        Subtitle = "Control which events trigger emails and who receives them."
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+<partial name="_EmailNav" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-info-circle"></i>
+            <div>
+                <div>@Model.AlertMessage</div>
+                @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+                {
+                    <details class="lw-details mt-2">
+                        <summary>Details</summary>
+                        <div class="small text-muted mt-1">@Model.AlertDetails</div>
+                    </details>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<form method="post" class="card lw-card shadow-sm border-0">
+    @Html.AntiForgeryToken()
+    <div class="card-body lw-card-body">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Status</th>
+                        <th>Frequency</th>
+                        <th>Recipient roles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Rules.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">@Model.Rules[i].Name</div>
+                                <div class="text-muted small">@Model.Rules[i].EventKey</div>
+                                <input type="hidden" name="Rules[@i].Id" value="@Model.Rules[i].Id" />
+                                <input type="hidden" name="Rules[@i].EventKey" value="@Model.Rules[i].EventKey" />
+                                <input type="hidden" name="Rules[@i].Name" value="@Model.Rules[i].Name" />
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="Rules[@i].IsEnabled" value="true" @(Model.Rules[i].IsEnabled ? "checked" : "") @(canManage ? "" : "disabled") />
+                                    <label class="form-check-label">@(Model.Rules[i].IsEnabled ? "Enabled" : "Disabled")</label>
+                                </div>
+                            </td>
+                            <td>
+                                <select class="form-select" name="Rules[@i].Frequency" @(canManage ? "" : "disabled")>
+                                    @foreach (var frequency in Model.Frequencies)
+                                    {
+                                        <option value="@frequency" selected="@(Model.Rules[i].Frequency == frequency)">@frequency</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select" name="Rules[@i].SelectedRoles" multiple size="3" @(canManage ? "" : "disabled")>
+                                    @foreach (var role in Model.Roles)
+                                    {
+                                        <option value="@role" selected="@(Model.Rules[i].SelectedRoles.Contains(role, StringComparer.OrdinalIgnoreCase))">@role</option>
+                                    }
+                                </select>
+                                <div class="text-muted small mt-1">Hold Ctrl/⌘ to select multiple roles.</div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary lw-btn" type="submit" data-loading-text="Saving..." @(canManage ? "" : "disabled")>
+                <i class="bi bi-save me-1"></i>Save notifications
+            </button>
+        </div>
+    </div>
+</form>

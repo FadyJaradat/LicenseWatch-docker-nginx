@@ -1,0 +1,39 @@
+@model PriorityListViewModel
+
+<div class="lw-priority-list">
+    @if (Model.Items.Count == 0)
+    {
+        <div class="lw-empty-inline">
+            <span class="lw-empty-inline__icon"><i class="bi @(Model.EmptyIcon ?? "bi-check-circle")"></i></span>
+            <div class="text-muted small">@Model.EmptyMessage</div>
+            @if (!string.IsNullOrWhiteSpace(Model.EmptyCtaLabel) && !string.IsNullOrWhiteSpace(Model.EmptyCtaUrl))
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="@Model.EmptyCtaUrl">@Model.EmptyCtaLabel</a>
+            }
+        </div>
+    }
+    else
+    {
+        foreach (var item in Model.Items)
+        {
+            var severity = item.Severity.ToLowerInvariant();
+            <div class="lw-priority-item lw-priority--@severity">
+                <span class="badge lw-badge lw-badge--@severity">@item.Severity</span>
+                <div class="lw-priority-item__content">
+                    <div class="fw-semibold">@item.Summary</div>
+                    @if (!string.IsNullOrWhiteSpace(item.Why))
+                    {
+                        <details class="lw-details">
+                            <summary>Details</summary>
+                            <div class="text-muted small">@item.Why</div>
+                        </details>
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(item.CtaUrl) && !string.IsNullOrWhiteSpace(item.CtaLabel))
+                {
+                    <a class="btn btn-sm lw-btn btn-outline-primary" href="@item.CtaUrl">@item.CtaLabel</a>
+                }
+            </div>
+        }
+    }
+</div>

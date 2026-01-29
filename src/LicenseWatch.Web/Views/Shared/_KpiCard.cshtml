@@ -1,0 +1,48 @@
+@model KpiCardViewModel
+@{
+    var severity = Model.IsZero ? "good" : Model.Severity.ToLowerInvariant();
+    var cssClass = $"lw-kpi lw-kpi-tile lw-kpi--{severity}";
+    var hasLink = !string.IsNullOrWhiteSpace(Model.Href);
+    var ariaLabel = $"{Model.Label} {Model.Value}";
+}
+
+@if (hasLink)
+{
+    <a class="@cssClass" href="@Model.Href" aria-label="@ariaLabel">
+        <div class="lw-kpi__body">
+            <div class="lw-kpi__meta">
+                <span class="lw-kpi__label">@Model.Label</span>
+                <span class="lw-kpi__value" data-counter="@Model.NumericValue">@Model.Value</span>
+                @if (!string.IsNullOrWhiteSpace(Model.Subtext))
+                {
+                    <span class="lw-kpi__subtext">@Model.Subtext</span>
+                }
+                @if (Model.IsZero)
+                {
+                    <span class="lw-kpi__good"><i class="bi bi-check-circle"></i>All good</span>
+                }
+            </div>
+            <span class="lw-kpi__icon"><i class="bi @Model.Icon"></i></span>
+        </div>
+    </a>
+}
+else
+{
+    <div class="@cssClass" role="group" aria-label="@ariaLabel">
+        <div class="lw-kpi__body">
+            <div class="lw-kpi__meta">
+                <span class="lw-kpi__label">@Model.Label</span>
+                <span class="lw-kpi__value" data-counter="@Model.NumericValue">@Model.Value</span>
+                @if (!string.IsNullOrWhiteSpace(Model.Subtext))
+                {
+                    <span class="lw-kpi__subtext">@Model.Subtext</span>
+                }
+                @if (Model.IsZero)
+                {
+                    <span class="lw-kpi__good"><i class="bi bi-check-circle"></i>All good</span>
+                }
+            </div>
+            <span class="lw-kpi__icon"><i class="bi @Model.Icon"></i></span>
+        </div>
+    </div>
+}

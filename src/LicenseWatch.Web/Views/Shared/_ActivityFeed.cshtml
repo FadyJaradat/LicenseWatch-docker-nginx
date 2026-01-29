@@ -1,0 +1,41 @@
+@model ActivityFeedViewModel
+
+<div class="lw-activity-feed">
+    @if (Model.Items.Count == 0)
+    {
+        <div class="lw-empty-inline">
+            <span class="lw-empty-inline__icon"><i class="bi @(Model.EmptyIcon ?? "bi-clock-history")"></i></span>
+            <div class="text-muted small">@Model.EmptyMessage</div>
+            @if (!string.IsNullOrWhiteSpace(Model.EmptyCtaLabel) && !string.IsNullOrWhiteSpace(Model.EmptyCtaUrl))
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="@Model.EmptyCtaUrl">@Model.EmptyCtaLabel</a>
+            }
+        </div>
+    }
+    else
+    {
+        <ul class="list-unstyled mb-0">
+            @foreach (var item in Model.Items)
+            {
+                var timeLabel = item.OccurredAtUtc.ToLocalTime().ToString("MMM dd, HH:mm");
+                <li class="lw-activity-item">
+                    <div class="lw-activity-item__icon"><i class="bi @item.Icon"></i></div>
+                    <div class="lw-activity-item__body">
+                        <div class="d-flex justify-content-between gap-2">
+                            <div>
+                                <div class="fw-semibold">@item.Action</div>
+                                <div class="text-muted small">@item.Summary</div>
+                                <div class="text-muted small">@item.Actor</div>
+                            </div>
+                            <div class="text-muted small">@timeLabel</div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(item.TargetUrl))
+                        {
+                            <a class="lw-activity-item__link" href="@item.TargetUrl">Open</a>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

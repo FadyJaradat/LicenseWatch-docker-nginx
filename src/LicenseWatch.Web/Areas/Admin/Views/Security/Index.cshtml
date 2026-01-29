@@ -1,0 +1,134 @@
+@model LicenseWatch.Web.Models.Admin.SecurityDashboardViewModel
+@{
+    ViewData["Title"] = "Security";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Security posture",
+        Subtitle = "Baseline controls and recent security events.",
+        UpdatedLabel = $"Generated {Model.GeneratedAtUtc:g}"
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">CSP</div>
+            <div class="fw-semibold">@(Model.Posture.CspEnabled ? "Enabled" : "Disabled")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">Rate limiting</div>
+            <div class="fw-semibold">@(Model.Posture.RateLimitingEnabled ? "Enabled" : "Disabled")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">HSTS</div>
+            <div class="fw-semibold">@(Model.Posture.HstsEnabled ? "Enabled" : "Disabled")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">Environment</div>
+            <div class="fw-semibold">@Model.EnvironmentName</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card lw-card p-4">
+            <h5 class="mb-3">Policy summary</h5>
+            <div class="mb-3">
+                <div class="text-muted small">Cookies</div>
+                <div class="fw-semibold">@Html.Raw(FormatSummary(Model.Posture.CookieSummary))</div>
+            </div>
+            <div class="mb-3">
+                <div class="text-muted small">Password policy</div>
+                <div class="fw-semibold">@Html.Raw(FormatSummary(Model.Posture.PasswordSummary))</div>
+            </div>
+            <div class="mb-3">
+                <div class="text-muted small">Lockout policy</div>
+                <div class="fw-semibold">@Html.Raw(FormatSummary(Model.Posture.LockoutSummary))</div>
+            </div>
+            <div>
+                <div class="text-muted small">Rate limits</div>
+                <div class="fw-semibold">@Html.Raw(FormatSummary(Model.Posture.RateLimitSummary))</div>
+            </div>
+        </div>
+        <div class="card lw-card p-4 mt-4">
+            <h5>Guidance</h5>
+            <p class="text-muted">Review policies after each release and confirm controls align with your compliance needs.</p>
+            <ul class="list-unstyled small text-muted mb-0">
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>Maintain strong password requirements</li>
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-accent me-2"></i>Verify rate limits on sign-in</li>
+                <li><i class="bi bi-check-circle-fill text-accent me-2"></i>Audit repeated lockouts quickly</li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card lw-card p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Recent security events</h5>
+                <span class="text-muted small">Last 50 events</span>
+            </div>
+            @if (Model.Events.Count == 0)
+            {
+                var emptyState = new EmptyStateViewModel
+                {
+                    Icon = "bi-shield-check",
+                    Title = "No security events yet",
+                    Message = "Events appear when rate limits or policy triggers occur. Keep an eye on audit logs for activity.",
+                    PrimaryCta = new CtaViewModel
+                    {
+                        Label = "View audit log",
+                        Url = "/admin/audit",
+                        Icon = "bi-journal-text"
+                    },
+                    SecondaryCta = new CtaViewModel
+                    {
+                        Label = "System status",
+                        Url = "/admin/system",
+                        Icon = "bi-heart-pulse"
+                    }
+                };
+                <partial name="_EmptyState" model="emptyState" />
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Summary</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Events)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@item.EventType</td>
+                                    <td>@item.Summary</td>
+                                    <td class="text-muted">@item.OccurredAtUtc.ToString("MMM dd, HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string FormatSummary(string summary)
+    {
+        return summary.Replace(" ? ", " &middot; ");
+    }
+}
+

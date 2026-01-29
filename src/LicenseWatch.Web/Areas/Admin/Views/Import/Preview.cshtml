@@ -1,0 +1,101 @@
+@model LicenseWatch.Web.Models.Admin.ImportPreviewViewModel
+@{
+    ViewData["Title"] = "Import preview";
+}
+
+<div class="lw-page-header mb-4 fade-up">
+    <div>
+        <p class="text-uppercase text-muted small mb-1">Admin area</p>
+        <h1 class="h3 fw-semibold mb-0">Import preview</h1>
+        <p class="text-secondary mb-0">Review rows before committing changes.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form asp-action="Commit" asp-route-sessionId="@Model.SessionId" method="post">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-primary" type="submit" data-loading-text="Committing..." @(Model.CanCommit ? "" : "disabled")>
+                <i class="bi bi-check-circle me-1"></i>Commit import
+            </button>
+        </form>
+        <form asp-action="Cancel" asp-route-sessionId="@Model.SessionId" method="post">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-outline-secondary" type="submit" data-loading-text="Cancelling...">Cancel</button>
+        </form>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <div class="small text-muted mt-1">@Model.AlertDetails</div>
+            </details>
+        }
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="metric-tile"><div class="text-muted small">Total rows</div><div class="h5 fw-semibold mb-0">@Model.TotalRows</div></div></div>
+    <div class="col-md-3"><div class="metric-tile"><div class="text-muted small">Valid</div><div class="h5 fw-semibold mb-0">@Model.ValidRows</div></div></div>
+    <div class="col-md-3"><div class="metric-tile"><div class="text-muted small">Invalid</div><div class="h5 fw-semibold mb-0">@Model.InvalidRows</div></div></div>
+    <div class="col-md-3"><div class="metric-tile"><div class="text-muted small">New licenses</div><div class="h5 fw-semibold mb-0">@Model.NewLicenses</div></div></div>
+</div>
+
+<div class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Preview", new { sessionId = Model.SessionId, filter = "All" })">All</a>
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Preview", new { sessionId = Model.SessionId, filter = "Valid" })">Valid</a>
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Preview", new { sessionId = Model.SessionId, filter = "Invalid" })">Invalid</a>
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Preview", new { sessionId = Model.SessionId, filter = "New" })">New</a>
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Preview", new { sessionId = Model.SessionId, filter = "Update" })">Update</a>
+            <a class="btn btn-outline-primary btn-sm" asp-action="DownloadErrors" asp-route-sessionId="@Model.SessionId">Download errors</a>
+        </div>
+    </div>
+</div>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Status</th>
+                        <th>License</th>
+                        <th>Category</th>
+                        <th>Vendor</th>
+                        <th>Expires</th>
+                        <th>Action</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td>@row.RowNumber</td>
+                            <td><span class="badge @RowStatusBadge(row.IsValid)">@(row.IsValid ? "Valid" : "Invalid")</span></td>
+                            <td>@row.LicenseName</td>
+                            <td>@row.CategoryName</td>
+                            <td>@row.Vendor</td>
+                            <td>@(row.ExpiresOnUtc?.ToString("yyyy-MM-dd") ?? "-")</td>
+                            <td>@row.Action</td>
+                            <td class="text-danger small">@row.ErrorMessage</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string RowStatusBadge(bool isValid)
+        => isValid ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger";
+}
+
+

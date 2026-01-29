@@ -1,0 +1,90 @@
+@model LicenseWatch.Web.Models.Admin.MaintenanceViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Maintenance";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.MaintenanceManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Maintenance",
+        Subtitle = "Create backups and manage data locations."
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <div class="small text-muted mt-1">@Model.AlertDetails</div>
+            </details>
+        }
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card lw-card shadow-sm border-0 h-100" id="backup-now">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Backup now</h2>
+                <p class="text-secondary small">Generate a full snapshot of App_Data for offline restore.</p>
+                <form asp-action="Backup" method="post">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-primary lw-btn" type="submit" data-loading-text="Creating..." @(canManage ? "" : "disabled")>
+                        <i class="bi bi-cloud-download me-1"></i>Create backup
+                    </button>
+                </form>
+                <hr />
+                <h3 class="h6 fw-semibold mb-2">Recent backups</h3>
+                @if (!Model.Backups.Any())
+                {
+                    <div class="lw-empty-inline">
+                        <span class="lw-empty-inline__icon"><i class="bi bi-archive"></i></span>
+                        <div class="text-muted small">No backups created yet. Run your first snapshot to protect current data.</div>
+                        <a class="btn btn-sm btn-outline-secondary" href="#backup-now">Create backup</a>
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var backup in Model.Backups)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <div class="fw-semibold">@backup.FileName</div>
+                                    <div class="text-muted small">@backup.CreatedAtUtc.ToLocalTime().ToString("g") &middot; @backup.SizeLabel</div>
+                                </div>
+                                <a class="btn btn-sm btn-outline-secondary lw-btn @(canManage ? "" : "disabled")"
+                                   asp-action="Download"
+                                   asp-route-fileName="@backup.FileName"
+                                   tabindex="@(canManage ? "0" : "-1")"
+                                   aria-disabled="@(canManage ? "false" : "true")">
+                                    Download
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card lw-card shadow-sm border-0 h-100">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Restore guidance</h2>
+                <p class="text-secondary small">For safety, restore via the offline scripts in /ops. Stop containers before restoring.</p>
+                <div class="alert alert-warning border-0 small">
+                    Restores overwrite existing data. Always verify backups before applying.
+                </div>
+                <h3 class="h6 fw-semibold mt-3">Data locations</h3>
+                <div class="text-muted small">App_Data: @Model.AppDataPath</div>
+                <div class="text-muted small">Backups: @Model.BackupsPath</div>
+            </div>
+        </div>
+    </div>
+</div>

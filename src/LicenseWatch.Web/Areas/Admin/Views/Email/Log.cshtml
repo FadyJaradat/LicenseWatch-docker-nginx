@@ -1,0 +1,129 @@
+@model LicenseWatch.Web.Models.Admin.NotificationLogListViewModel
+@{
+    ViewData["Title"] = "Email log";
+    ViewData["EmailNav"] = "log";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Notification log",
+        Subtitle = "Track outbound email activity."
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<partial name="_EmailNav" />
+
+<form method="get" class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All</option>
+                    <option value="Sent" selected="@(Model.Status == "Sent")">Sent</option>
+                    <option value="Failed" selected="@(Model.Status == "Failed")">Failed</option>
+                    <option value="Suppressed" selected="@(Model.Status == "Suppressed")">Suppressed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Type</label>
+                <select class="form-select" name="type">
+                    <option value="">All</option>
+                    @foreach (var type in Model.Types)
+                    {
+                        <option value="@type" selected="@(Model.Type == type)">@type</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Search</label>
+                <input class="form-control" name="search" value="@Model.Search" placeholder="Recipient or subject" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">From (UTC)</label>
+                <input type="datetime-local" class="form-control" name="fromUtc" value="@(Model.FromUtc?.ToString("yyyy-MM-ddTHH:mm"))" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">To (UTC)</label>
+                <input type="datetime-local" class="form-control" name="toUtc" value="@(Model.ToUtc?.ToString("yyyy-MM-ddTHH:mm"))" />
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary lw-btn" type="submit"><i class="bi bi-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/email/log">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        @if (!Model.Items.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-inbox",
+                Title = "No notifications yet",
+                Message = "Send a test email to validate delivery and start the notification log.",
+                PrimaryCta = new CtaViewModel
+                {
+                    Label = "Send test email",
+                    Url = "/admin/email#send-test",
+                    Icon = "bi-send"
+                },
+                SecondaryCta = new CtaViewModel
+                {
+                    Label = "Email settings",
+                    Url = "/admin/email",
+                    Icon = "bi-envelope-paper-heart"
+                }
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>Type</th>
+                            <th>Recipient</th>
+                            <th>Status</th>
+                            <th>Subject</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="text-muted small">@item.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td>@item.Type</td>
+                                <td>@item.ToEmail</td>
+                                <td><span class="badge @StatusBadge(item.Status)">@item.Status</span></td>
+                                <td class="text-truncate max-w-360">@item.Subject</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-primary lw-btn" asp-action="LogDetails" asp-route-id="@item.Id">Details</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private static string StatusBadge(string status)
+        => status switch
+        {
+            "Sent" => "bg-success-subtle text-success",
+            "Failed" => "bg-danger-subtle text-danger",
+            "Suppressed" => "bg-warning-subtle text-warning",
+            _ => "bg-light text-muted border"
+        };
+}
+

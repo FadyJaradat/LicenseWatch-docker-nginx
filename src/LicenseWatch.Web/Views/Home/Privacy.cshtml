@@ -1,0 +1,17 @@
+@{
+    ViewData["Title"] = "Privacy";
+    var header = new PageHeaderViewModel
+    {
+        Title = "Privacy",
+        Subtitle = "Data handling and environment boundaries."
+    };
+}
+
+<partial name="_PageHeader" model="header" />
+
+<section class="lw-card lw-section fade-up">
+    <div class="lw-section__body">
+        <p class="text-secondary">LicenseWatch runs inside your infrastructure. No data leaves the environment unless you configure external services (SMTP, proxies, etc.).</p>
+        <p class="text-secondary mb-0">Review your organization policies before enabling outbound integrations.</p>
+    </div>
+</section>

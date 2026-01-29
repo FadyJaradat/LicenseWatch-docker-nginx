@@ -1,0 +1,65 @@
+@model LicenseWatch.Web.Models.Admin.NotificationLogDetailViewModel
+@{
+    ViewData["Title"] = "Notification detail";
+    ViewData["EmailNav"] = "log";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Notification detail",
+        Subtitle = "Delivery diagnostics for a single message.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Log">
+                <i class="bi bi-arrow-left me-1"></i>Back to log
+            </a>
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<partial name="_EmailNav" />
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="text-muted small">Status</div>
+                <div class="fw-semibold">@Model.Status</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">Type</div>
+                <div class="fw-semibold">@Model.Type</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">Created</div>
+                <div class="fw-semibold">@Model.CreatedAtUtc.ToLocalTime().ToString("g")</div>
+            </div>
+        </div>
+        <div class="mt-3">
+            <div class="text-muted small">Recipient</div>
+            <div class="fw-semibold">@Model.ToEmail</div>
+        </div>
+        <div class="mt-3">
+            <div class="text-muted small">Subject</div>
+            <div class="fw-semibold">@Model.Subject</div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Error))
+        {
+            <div class="mt-4">
+                <h2 class="h6 fw-semibold">Error</h2>
+                <details class="lw-details">
+                    <summary>View technical details</summary>
+                    <pre class="small bg-light p-3 rounded mt-2">@Model.Error</pre>
+                </details>
+            </div>
+        }
+        <div class="mt-3 text-muted small">
+            Correlation: @(string.IsNullOrWhiteSpace(Model.CorrelationId) ? "-" : Model.CorrelationId)
+        </div>
+        <div class="text-muted small">
+            Trigger: @(string.IsNullOrWhiteSpace(Model.TriggerEntityType) ? "-" : Model.TriggerEntityType) @(string.IsNullOrWhiteSpace(Model.TriggerEntityId) ? "" : Model.TriggerEntityId)
+        </div>
+    </div>
+</div>
+

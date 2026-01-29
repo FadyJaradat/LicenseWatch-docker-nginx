@@ -1,0 +1,165 @@
+@model LicenseWatch.Web.Models.Admin.UserDetailViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "User details";
+    var isSelf = string.Equals(User?.Identity?.Name, Model.Email, StringComparison.OrdinalIgnoreCase);
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.UsersManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = Model.Email,
+        Subtitle = "Manage roles, access, and account security.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-area="Admin" asp-controller="Users" asp-action="Index">Back to users</a>
+            @if (canManage && Model.CanDelete)
+            {
+                <button class="btn btn-outline-danger lw-btn" type="button" data-bs-toggle="modal" data-bs-target="#delete-user-modal">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+            }
+            else if (canManage)
+            {
+                <button class="btn btn-outline-danger lw-btn" type="button" disabled title="@Model.DeleteDisabledReason">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+            }
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle" data-toast="true" role="alert">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <pre class="small mb-0">@Model.AlertDetails</pre>
+            </details>
+        }
+    </div>
+}
+
+@if (canManage && Model.CanDelete)
+{
+    <div class="modal fade" id="delete-user-modal" tabindex="-1" aria-labelledby="delete-user-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="delete-user-modal-label">Delete user</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    This will permanently delete <strong>@Model.Email</strong>. This action cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light lw-btn" data-bs-dismiss="modal">Cancel</button>
+                    <form asp-area="Admin" asp-controller="Users" asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger lw-btn" data-loading-text="Deleting...">Delete user</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.TempPassword))
+{
+    <div class="alert alert-success" role="alert">
+        <div class="fw-semibold">Temporary password</div>
+        <div class="mt-2"><code>@Model.TempPassword</code></div>
+        <div class="small text-muted mt-2">Share this once with the user and store it securely.</div>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card lw-card p-4">
+            <h5>Account status</h5>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <div class="text-muted small">Status</div>
+                    <div class="fw-semibold">@(Model.IsLocked ? "Locked" : "Active")</div>
+                </div>
+                <span class="badge @(Model.IsLocked ? "bg-danger-subtle text-danger" : "bg-success-subtle text-success")">@(Model.IsLocked ? "Locked" : "Active")</span>
+            </div>
+            <div class="text-muted small">Last login: @Model.LastLoginDisplay</div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                @if (Model.IsLocked)
+                {
+                    <form asp-area="Admin" asp-controller="Users" asp-action="Unlock" asp-route-id="@Model.Id" method="post">
+                        <button type="submit" class="btn btn-outline-success lw-btn" @(canManage ? "" : "disabled")>Unlock</button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-area="Admin" asp-controller="Users" asp-action="Lock" asp-route-id="@Model.Id" method="post">
+                        <button type="submit" class="btn btn-outline-danger lw-btn" @(canManage ? "" : "disabled")>Lock</button>
+                    </form>
+                }
+                <form asp-area="Admin" asp-controller="Users" asp-action="ResetPassword" asp-route-id="@Model.Id" method="post">
+                    <button type="submit" class="btn btn-outline-secondary lw-btn" @(canManage ? "" : "disabled")>Reset password</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card lw-card p-4 mt-4" id="assign-role">
+            <h5>Assign role</h5>
+            <form asp-area="Admin" asp-controller="Users" asp-action="AssignRole" asp-route-id="@Model.Id" method="post" class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Role</label>
+                    <select class="form-select" name="roleName" @(canManage ? "" : "disabled")>
+                        @foreach (var role in Model.AllRoles)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary lw-btn" @(canManage ? "" : "disabled")>Assign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card lw-card p-4">
+            <h5>Current roles</h5>
+            @if (Model.Roles.Count == 0)
+            {
+                <div class="lw-empty-inline">
+                    <span class="lw-empty-inline__icon"><i class="bi bi-award"></i></span>
+                    <div class="text-muted small">No roles assigned yet. Assign one to grant access.</div>
+                    <a class="btn btn-sm btn-outline-secondary lw-btn" href="#assign-role">Assign role</a>
+                </div>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var role in Model.Roles)
+                    {
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="fw-semibold">@role</div>
+                                <form asp-area="Admin" asp-controller="Users" asp-action="RemoveRole" asp-route-id="@Model.Id" method="post">
+                                    <input type="hidden" name="roleName" value="@role" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger lw-btn"
+                                            @(canManage && !(isSelf && string.Equals(role, "SystemAdmin", StringComparison.OrdinalIgnoreCase)) ? "" : "disabled")>
+                                        Remove
+                                    </button>
+                                </form>
+                            </div>
+                            @if (isSelf && string.Equals(role, "SystemAdmin", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <div class="small text-muted">You cannot remove SystemAdmin from your own account.</div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

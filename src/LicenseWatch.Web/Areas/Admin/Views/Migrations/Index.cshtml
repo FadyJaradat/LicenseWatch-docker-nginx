@@ -1,0 +1,166 @@
+@model LicenseWatch.Web.Models.Admin.MigrationAssistantViewModel
+@{
+    ViewData["Title"] = "Migrations";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Migration assistant",
+        Subtitle = "Review schema changes and apply App DB migrations safely.",
+        UpdatedLabel = $"Checked {Model.CheckedAtUtc.ToLocalTime():g}"
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<div class="alert alert-warning border-0 shadow-sm">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <div>
+            <strong>Backup recommended.</strong> Create a snapshot before applying migrations.
+        </div>
+        <a class="btn btn-outline-secondary btn-sm lw-btn" asp-area="Admin" asp-controller="Maintenance" asp-action="Index">
+            <i class="bi bi-shield-check me-1"></i> Go to maintenance
+        </a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+@foreach (var context in Model.Contexts)
+{
+    var slug = context.Name.Replace(" ", "-").ToLowerInvariant();
+    var pendingCount = context.PendingMigrations.Count;
+    var appliedCount = context.AppliedMigrations.Count;
+    <div class="card lw-card shadow-sm border-0 mb-3">
+        <div class="card-body lw-card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                <div>
+                    <h2 class="h5 fw-semibold mb-1">@context.Name</h2>
+                    <p class="text-secondary small mb-0">@context.Description</p>
+                </div>
+                <span class="badge @StatusBadge(context.Status)">@context.Status</span>
+            </div>
+
+            <div class="row g-3 mt-2">
+                <div class="col-md-4">
+                    <div class="text-muted small">Applied</div>
+                    <div class="fw-semibold">@appliedCount</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Pending</div>
+                    <div class="fw-semibold">@pendingCount</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Last applied</div>
+                    <div class="fw-semibold">@(context.LastAppliedUtc.HasValue ? context.LastAppliedUtc.Value.ToLocalTime().ToString("g") : "Unknown")</div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(context.Guidance))
+            {
+                <div class="text-warning small mt-3">@context.Guidance</div>
+            }
+
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#pending-@slug">
+                    Pending list
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#applied-@slug">
+                    Applied list
+                </button>
+                @if (context.CanApply)
+                {
+                    <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#apply-@slug">
+                        <i class="bi bi-play-circle me-1"></i> Apply App DB migrations
+                    </button>
+                }
+            </div>
+
+            <div id="pending-@slug" class="collapse mt-3">
+                @if (pendingCount == 0)
+                {
+                    <div class="lw-empty-inline">
+                        <span class="lw-empty-inline__icon"><i class="bi bi-check-circle"></i></span>
+                        <div class="text-muted small">No pending migrations right now.</div>
+                        <a class="btn btn-sm btn-outline-secondary" href="/admin/migrations">Refresh checks</a>
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush small">
+                        @foreach (var migration in context.PendingMigrations)
+                        {
+                            <li class="list-group-item px-0">@migration</li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div id="applied-@slug" class="collapse mt-3">
+                @if (appliedCount == 0)
+                {
+                    <div class="lw-empty-inline">
+                        <span class="lw-empty-inline__icon"><i class="bi bi-journal-check"></i></span>
+                        <div class="text-muted small">No applied migrations recorded yet.</div>
+                        <a class="btn btn-sm btn-outline-secondary" href="/admin/migrations">Refresh checks</a>
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush small">
+                        @foreach (var migration in context.AppliedMigrations)
+                        {
+                            <li class="list-group-item px-0">@migration</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (context.CanApply)
+    {
+        <div class="modal fade" id="apply-@slug" tabindex="-1" aria-labelledby="apply-@slug-label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="apply-@slug-label">Apply App DB migrations</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">This will update the application database schema to the latest version.</p>
+                        <div class="alert alert-warning border-0 small mb-0">
+                            Ensure you have a recent backup before proceeding.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <form asp-area="Admin" asp-controller="Migrations" asp-action="ApplyAppDb" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary" data-loading-text="Applying...">Apply migrations</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@functions {
+    private static string StatusBadge(string status)
+        => status switch
+        {
+            "Up to date" => "bg-success-subtle text-success",
+            "Pending" => "bg-warning-subtle text-warning",
+            "No migrations" => "bg-light text-muted border",
+            "Managed" => "bg-info-subtle text-info",
+            "Missing" => "bg-danger-subtle text-danger",
+            "Unavailable" => "bg-danger-subtle text-danger",
+            _ => "bg-light text-muted border"
+        };
+}
+
+

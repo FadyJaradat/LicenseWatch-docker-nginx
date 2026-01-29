@@ -1,0 +1,139 @@
+@model LicenseWatch.Web.Models.Admin.RecommendationListViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Recommendations";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.OptimizationManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Recommendations",
+        Subtitle = "Track savings opportunities and execution progress.",
+        Actions = @<text>
+            @if (canManage)
+            {
+                <a class="btn btn-primary lw-btn" asp-action="Create"><i class="bi bi-plus-circle me-1"></i>New recommendation</a>
+            }
+            else
+            {
+                <button class="btn btn-primary lw-btn" type="button" disabled title="You do not have permission to manage recommendations.">
+                    <i class="bi bi-plus-circle me-1"></i>New recommendation
+                </button>
+            }
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<form method="get" class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label text-muted small">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All</option>
+                    @foreach (var option in Model.StatusOptions)
+                    {
+                        <option value="@option" selected="@(Model.Status == option)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted small">Category</label>
+                <select class="form-select" name="categoryId">
+                    <option value="">All</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Id" selected="@(Model.CategoryId == category.Id)">@category.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted small">License</label>
+                <select class="form-select" name="licenseId">
+                    <option value="">All</option>
+                    @foreach (var license in Model.Licenses)
+                    {
+                        <option value="@license.Id" selected="@(Model.LicenseId == license.Id)">@license.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary lw-btn" type="submit"><i class="bi bi-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/optimization/recommendations">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        @if (!Model.Recommendations.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-clipboard-check",
+                Title = "No recommendations yet",
+                Message = "Create a recommendation from an optimization insight to start tracking savings.",
+                PrimaryCta = new CtaViewModel
+                {
+                    Label = "View insights",
+                    Url = "/admin/optimization",
+                    Icon = "bi-lightbulb"
+                },
+                SecondaryCta = new CtaViewModel
+                {
+                    Label = "Create manually",
+                    Url = "/admin/optimization/recommendations/create",
+                    Icon = "bi-plus-circle"
+                }
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Annual savings</th>
+                            <th>License</th>
+                            <th>Updated</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rec in Model.Recommendations)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@rec.Title</td>
+                                <td><span class="badge bg-light text-muted border">@rec.Status</span></td>
+                                <td>@(rec.EstimatedAnnualSavings.HasValue ? $"{rec.Currency} {rec.EstimatedAnnualSavings.Value:N0}" : "-")</td>
+                                <td>@(rec.LicenseName ?? "-")</td>
+                                <td class="text-muted small">@rec.UpdatedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-primary lw-btn" asp-action="Details" asp-route-id="@rec.Id">Details</a>
+                                    @if (canManage)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary lw-btn" asp-action="Edit" asp-route-id="@rec.Id">Edit</a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage recommendations.">Edit</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

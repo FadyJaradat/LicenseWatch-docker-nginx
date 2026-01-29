@@ -1,0 +1,75 @@
+@model LicenseWatch.Web.Models.Admin.RecommendationFormViewModel
+@{
+    ViewData["Title"] = "Edit recommendation";
+}
+
+<div class="lw-page-header mb-4 fade-up">
+    <div>
+        <p class="text-uppercase text-muted small mb-1">Admin area</p>
+        <h1 class="h3 fw-semibold mb-0">Edit recommendation</h1>
+        <p class="text-secondary mb-0">Update status, scope, and savings estimates.</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<form method="post" class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Title</label>
+                <input class="form-control" name="Title" value="@Model.Title" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Status</label>
+                <select class="form-select" name="Status">
+                    @foreach (var option in Model.StatusOptions)
+                    {
+                        <option value="@option" selected="@(Model.Status == option)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">License</label>
+                <select class="form-select" name="LicenseId">
+                    <option value="">Unassigned</option>
+                    @foreach (var license in Model.Licenses)
+                    {
+                        <option value="@license.Id" selected="@(Model.LicenseId == license.Id)">@license.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Monthly savings</label>
+                <input class="form-control" name="EstimatedMonthlySavings" type="number" step="0.01" value="@Model.EstimatedMonthlySavings" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Annual savings</label>
+                <input class="form-control" name="EstimatedAnnualSavings" type="number" step="0.01" value="@Model.EstimatedAnnualSavings" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Currency</label>
+                <input class="form-control" name="Currency" value="@Model.Currency" />
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea class="form-control" name="Description" rows="4">@Model.Description</textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-check-circle me-1"></i>Save</button>
+            <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+

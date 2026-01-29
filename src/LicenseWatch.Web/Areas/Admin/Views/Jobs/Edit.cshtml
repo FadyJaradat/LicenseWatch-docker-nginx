@@ -1,0 +1,147 @@
+@model LicenseWatch.Web.Models.Admin.JobEditorViewModel
+@{
+    ViewData["Title"] = Model.IsCustom && string.IsNullOrWhiteSpace(Model.Key) ? "Create job" : "Edit schedule";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = Model.IsCustom && string.IsNullOrWhiteSpace(Model.Key) ? "Create custom job" : "Edit job schedule",
+        Subtitle = "Define schedule, job type, and runtime parameters.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Index">
+                <i class="bi bi-arrow-left me-1"></i>Back to jobs
+            </a>
+            <button type="submit" class="btn btn-primary lw-btn" form="job-form" data-loading-text="Saving...">
+                <i class="bi bi-save2 me-1"></i>Save schedule
+            </button>
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle" data-toast="true" role="alert">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <pre class="small mb-0">@Model.AlertDetails</pre>
+            </details>
+        }
+    </div>
+}
+
+<form id="job-form" asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Key" value="@Model.Key" />
+    <input type="hidden" name="IsCustom" value="@Model.IsCustom" />
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card lw-card shadow-sm border-0">
+                <div class="card-body lw-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Job name</label>
+                            <input class="form-control" name="Name" value="@Model.Name" placeholder="Ex: Nightly compliance sweep" @(Model.IsCustom ? "" : "disabled") />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Job type</label>
+                            <select class="form-select" name="JobType" @(Model.IsCustom ? "" : "disabled")>
+                                @foreach (var option in Model.JobTypes)
+                                {
+                                    <option value="@option.Value" selected="@(option.Value == Model.JobType)">
+                                        @option.Label
+                                    </option>
+                                }
+                            </select>
+                            <div class="form-text text-muted">Job type controls which engine task runs.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="Description" rows="2" placeholder="Add a short description" @(Model.IsCustom ? "" : "disabled")>@Model.Description</textarea>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Cron expression</label>
+                            <input class="form-control" name="CronExpression" value="@Model.CronExpression" placeholder="0 2 * * *" />
+                            <div class="form-text text-muted">Use standard 5-part cron (UTC). Example: 0 2 * * *.</div>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                @foreach (var preset in Model.CronPresets)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-secondary lw-btn" data-cron-preset="@preset.Expression">@preset.Label</button>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Enabled</label>
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" name="IsEnabled" value="true" @(Model.IsEnabled ? "checked" : "") />
+                                <label class="form-check-label text-muted">Schedule is active</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card lw-card shadow-sm border-0 mt-4">
+                <div class="card-body lw-card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h3 class="h6 fw-semibold mb-0">Parameters (optional)</h3>
+                        <button type="button" class="btn btn-sm btn-outline-secondary lw-btn" data-parameter-add>
+                            <i class="bi bi-plus-circle me-1"></i>Add parameter
+                        </button>
+                    </div>
+                    <div class="text-muted small mb-3">Provide key/value inputs for custom schedules. Leave blank to ignore.</div>
+                    <div class="lw-parameter-list">
+                        @for (var index = 0; index < Model.Parameters.Count; index++)
+                        {
+                            <div class="row g-2 align-items-center mb-2 lw-parameter-row">
+                                <div class="col-md-5">
+                                    <input class="form-control" name="Parameters[@index].Key" value="@Model.Parameters[index].Key" placeholder="Parameter key" />
+                                </div>
+                                <div class="col-md-7">
+                                    <input class="form-control" name="Parameters[@index].Value" value="@Model.Parameters[index].Value" placeholder="Value" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-muted small">Parameters are stored and available for future job handlers.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card lw-card shadow-sm border-0">
+                <div class="card-body lw-card-body">
+                    <h3 class="h6 fw-semibold">Next scheduled runs</h3>
+                    @if (Model.NextRuns.Count == 0)
+                    {
+                        <div class="text-muted small">Enter a valid cron expression to preview upcoming runs.</div>
+                    }
+                    else
+                    {
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var run in Model.NextRuns)
+                            {
+                                <li class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-light text-muted border"><i class="bi bi-clock"></i></span>
+                                    <span class="small">@run</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+            <div class="card lw-card shadow-sm border-0 mt-4">
+                <div class="card-body lw-card-body">
+                    <h3 class="h6 fw-semibold">Safety checklist</h3>
+                    <ul class="text-muted small mb-0">
+                        <li>Review schedules to avoid peak business hours.</li>
+                        <li>Take a backup before changing critical jobs.</li>
+                        <li>Disable jobs temporarily instead of deleting.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

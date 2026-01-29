@@ -1,0 +1,65 @@
+@model LicenseWatch.Web.Models.Admin.ImportLandingViewModel
+@{
+    ViewData["Title"] = "Import";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "CSV import",
+        Subtitle = "Upload and validate license data before committing changes.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Sample">
+                <i class="bi bi-download me-1"></i>Download sample CSV
+            </a>
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <div class="small text-muted mt-1">@Model.AlertDetails</div>
+            </details>
+        }
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <form asp-action="Upload" method="post" enctype="multipart/form-data" class="card lw-card shadow-sm border-0">
+            @Html.AntiForgeryToken()
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Upload file</h2>
+                <p class="text-secondary small">Accepted: @Model.AllowedExtensions | Max: @Model.MaxSizeMb MB</p>
+                <input class="form-control" type="file" name="file" accept=".csv" />
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-primary lw-btn" type="submit" data-loading-text="Uploading...">
+                        <i class="bi bi-cloud-arrow-up me-1"></i>Upload and validate
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-5">
+        <div class="card lw-card shadow-sm border-0 h-100">
+            <div class="card-body lw-card-body">
+                <h2 class="h6 fw-semibold mb-2">Required columns</h2>
+                <ul class="text-secondary small mb-3">
+                    <li>LicenseName</li>
+                    <li>CategoryName</li>
+                </ul>
+                <h2 class="h6 fw-semibold mb-2">Optional columns</h2>
+                <p class="text-secondary small mb-0">Vendor, SeatsPurchased, SeatsAssigned, ExpiresOn, Notes, LicenseId</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+

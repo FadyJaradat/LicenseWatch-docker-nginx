@@ -1,0 +1,142 @@
+@model LicenseWatch.Web.Models.Admin.SystemStatusViewModel
+@{
+    ViewData["Title"] = "System status";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "System status",
+        Subtitle = "Readiness checks, job summaries, and runtime metadata.",
+        Actions = @<text>
+            <form asp-area="Admin" asp-controller="System" asp-action="Run" method="post">
+                <button type="submit" class="btn btn-primary lw-btn" data-loading-text="Checking...">Run readiness checks</button>
+            </form>
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle" data-toast="true" role="alert">@Model.AlertMessage</div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">Version</div>
+            <div class="fw-semibold">@Model.Version</div>
+            <div class="text-muted small">Build @Model.BuildTimestamp</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">Commit</div>
+            <div class="fw-semibold">@Model.CommitShort</div>
+            <div class="text-muted small">@Model.Commit</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">Environment</div>
+            <div class="fw-semibold">@Model.EnvironmentName</div>
+            <div class="text-muted small">Uptime @Model.Uptime</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="text-muted small">Checked at</div>
+            <div class="fw-semibold">@Model.CheckedAtUtc.ToString("g")</div>
+            <div class="text-muted small">Started @Model.StartedAtUtc.ToString("g")</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card lw-card p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Job summaries</h5>
+                <a class="btn btn-sm btn-outline-secondary" asp-area="Admin" asp-controller="Jobs" asp-action="Index">Jobs console</a>
+            </div>
+            <div class="list-group list-group-flush">
+                @foreach (var job in Model.Jobs)
+                {
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between">
+                            <div class="fw-semibold">@job.Name</div>
+                            <span class="badge @StatusBadge(job.Status) lw-status-pulse" data-status="@StatusTone(job.Status)">@job.Status</span>
+                        </div>
+                        <div class="small text-muted">Last run: @(job.LastRunUtc?.ToString("g") ?? "Never")</div>
+                        @if (!string.IsNullOrWhiteSpace(job.Summary))
+                        {
+                            <div class="small text-muted">@job.Summary</div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card lw-card p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Readiness checks</h5>
+                <span class="text-muted small">@Model.Checks.Count checks</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Check</th>
+                            <th>Status</th>
+                            <th>Guidance</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var check in Model.Checks)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@check.Name</td>
+                                <td><span class="badge @StatusBadge(check.Status) lw-status-pulse" data-status="@StatusTone(check.Status)">@check.Status</span></td>
+                                <td class="text-muted">@check.Guidance</td>
+                                <td class="text-muted">@check.Duration.TotalMilliseconds.ToString("0") ms</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string StatusBadge(string status)
+    {
+        return status switch
+        {
+            "Healthy" => "bg-success-subtle text-success",
+            "Degraded" => "bg-warning-subtle text-warning",
+            "Unhealthy" => "bg-danger-subtle text-danger",
+            "Succeeded" => "bg-success-subtle text-success",
+            "Success" => "bg-success-subtle text-success",
+            "Failed" => "bg-danger-subtle text-danger",
+            _ => "bg-light text-muted border"
+        };
+    }
+
+    private static string StatusTone(string status)
+    {
+        return status switch
+        {
+            "Healthy" => "success",
+            "Succeeded" => "success",
+            "Success" => "success",
+            "Degraded" => "warning",
+            "Unhealthy" => "danger",
+            "Failed" => "danger",
+            _ => "warning"
+        };
+    }
+}
+
+

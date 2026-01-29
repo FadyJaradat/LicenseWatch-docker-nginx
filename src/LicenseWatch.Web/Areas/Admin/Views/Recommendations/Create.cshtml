@@ -1,0 +1,81 @@
+@model LicenseWatch.Web.Models.Admin.RecommendationFormViewModel
+@{
+    ViewData["Title"] = "Create recommendation";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Create recommendation",
+        Subtitle = "Capture the savings opportunity and next steps.",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Index">
+                <i class="bi bi-arrow-left-circle me-1"></i>Back to recommendations
+            </a>
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">@Model.AlertMessage</div>
+}
+
+<form method="post" class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Title</label>
+                <input class="form-control" name="Title" value="@Model.Title" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Status</label>
+                <select class="form-select" name="Status">
+                    @foreach (var option in Model.StatusOptions)
+                    {
+                        <option value="@option" selected="@(Model.Status == option)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">License</label>
+                <select class="form-select" name="LicenseId">
+                    <option value="">Unassigned</option>
+                    @foreach (var license in Model.Licenses)
+                    {
+                        <option value="@license.Id" selected="@(Model.LicenseId == license.Id)">@license.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Monthly savings</label>
+                <input class="form-control" name="EstimatedMonthlySavings" type="number" step="0.01" value="@Model.EstimatedMonthlySavings" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Annual savings</label>
+                <input class="form-control" name="EstimatedAnnualSavings" type="number" step="0.01" value="@Model.EstimatedAnnualSavings" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Currency</label>
+                <input class="form-control" name="Currency" value="@Model.Currency" />
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea class="form-control" name="Description" rows="4">@Model.Description</textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary lw-btn" type="submit" data-loading-text="Creating..."><i class="bi bi-check-circle me-1"></i>Create</button>
+            <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+

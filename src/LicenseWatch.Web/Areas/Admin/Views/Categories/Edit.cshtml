@@ -1,0 +1,36 @@
+@model LicenseWatch.Web.Models.Admin.CategoryFormViewModel
+@{
+    ViewData["Title"] = "Edit category";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Edit category",
+        Subtitle = "Update the category details and description."
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<form method="post" class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label fw-semibold"></label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label fw-semibold"></label>
+            <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary lw-btn" data-loading-text="Saving..."><i class="bi bi-check-circle me-1"></i>Save</button>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Index">Cancel</a>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

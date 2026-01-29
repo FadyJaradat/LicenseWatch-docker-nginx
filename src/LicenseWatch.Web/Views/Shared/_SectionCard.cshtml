@@ -1,0 +1,31 @@
+@model SectionCardViewModel
+
+<section class="lw-card lw-section h-100">
+    <div class="lw-section__header">
+        <div>
+            <h5 class="mb-0">@Model.Title</h5>
+            @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+            {
+                <div class="text-muted small">@Model.Subtitle</div>
+            }
+        </div>
+        @if (Model.Actions is not null)
+        {
+            <div class="lw-section__actions">
+                @Model.Actions.Invoke(new object())
+            </div>
+        }
+    </div>
+    @if (Model.Body is not null)
+    {
+        <div class="lw-section__body">
+            @Model.Body.Invoke(new object())
+        </div>
+    }
+    @if (Model.Footer is not null)
+    {
+        <div class="lw-section__footer">
+            @Model.Footer.Invoke(new object())
+        </div>
+    }
+</section>

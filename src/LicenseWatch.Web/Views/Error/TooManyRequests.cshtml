@@ -1,0 +1,19 @@
+@model LicenseWatch.Web.Models.ErrorPageViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    var emptyState = new EmptyStateViewModel
+    {
+        Icon = "bi-hourglass-split",
+        Title = Model.Title,
+        Message = Model.Message,
+        PrimaryCta = new CtaViewModel { Label = "Sign in again", Url = "/account/login" },
+        SecondaryCta = new CtaViewModel { Label = "Return home", Url = Url.Content("~/") ?? "/" }
+    };
+}
+
+<section class="fade-up">
+    <div class="text-center mb-4">
+        <partial name="_Logo" model="@("lw-logo--lg")" />
+    </div>
+    <partial name="_EmptyState" model="emptyState" />
+</section>

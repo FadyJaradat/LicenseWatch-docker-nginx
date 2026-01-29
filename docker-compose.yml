@@ -1,0 +1,59 @@
+services:
+  licensewatch-web:
+    profiles:
+      - dev
+    container_name: licensewatch-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      Security__SeedAdmin__Enabled: "true"
+      Security__SeedAdmin__Email: admin@licensewatch.local
+      Security__SeedAdmin__Password: ChangeMe!123!
+    volumes:
+      - identity_data:/app/App_Data
+
+  licensewatch-web-prod:
+    profiles:
+      - prod
+    container_name: licensewatch-web-prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      Security__SeedAdmin__Enabled: "false"
+      Logging__LogLevel__Default: Warning
+    volumes:
+      - identity_data:/app/App_Data
+
+  nginx:
+    profiles:
+      - dev
+    container_name: licensewatch-nginx
+    image: nginx:latest
+    depends_on:
+      - licensewatch-web
+    ports:
+      - "8080:80"
+      - "443:443"
+    volumes:
+      - ./ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ops/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./Certs:/etc/nginx/certs:ro
+
+  licensewatch-test:
+    profiles:
+      - test
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /src
+    volumes:
+      - ./:/src
+    environment:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+volumes:
+  identity_data:

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LicenseWatch.Core/LicenseWatch.Core.csproj" />
+    <Project Path="src/LicenseWatch.Infrastructure/LicenseWatch.Infrastructure.csproj" />
+    <Project Path="src/LicenseWatch.Web/LicenseWatch.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LicenseWatch.Tests.Unit/LicenseWatch.Tests.Unit.csproj" />
+    <Project Path="tests/LicenseWatch.Tests.Integration/LicenseWatch.Tests.Integration.csproj" />
+  </Folder>
+</Solution>

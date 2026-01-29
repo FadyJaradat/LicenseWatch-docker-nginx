@@ -1,0 +1,93 @@
+@model LicenseWatch.Web.Models.Admin.LicenseFormViewModel
+@{
+    ViewData["Title"] = "Edit license";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Edit license",
+        Subtitle = "Update contract details and seat counts."
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<form method="post" class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Name" class="form-label fw-semibold"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Vendor" class="form-label fw-semibold"></label>
+                <input asp-for="Vendor" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Category</label>
+                <select asp-for="CategoryId" class="form-select">
+                    <option value="">Select category</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="CategoryId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ExpiresOnUtc" class="form-label fw-semibold">Expires on</label>
+                <input asp-for="ExpiresOnUtc" type="date" class="form-control" />
+            </div>
+            <div class="col-12">
+                <div class="p-3 border rounded bg-light">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" asp-for="UseCustomThresholds" />
+                        <label class="form-check-label fw-semibold" asp-for="UseCustomThresholds">Override compliance thresholds</label>
+                    </div>
+                    <div class="text-muted small mt-1">Customize critical and warning days for this license.</div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label asp-for="CriticalThresholdDays" class="form-label fw-semibold">Critical days</label>
+                            <input asp-for="CriticalThresholdDays" type="number" min="1" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="WarningThresholdDays" class="form-label fw-semibold">Warning days</label>
+                            <input asp-for="WarningThresholdDays" type="number" min="1" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="form-text">If override is off, system thresholds apply.</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="SeatsPurchased" class="form-label fw-semibold"></label>
+                <input asp-for="SeatsPurchased" type="number" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="SeatsAssigned" class="form-label fw-semibold"></label>
+                <input asp-for="SeatsAssigned" type="number" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="CostPerSeatMonthly" class="form-label fw-semibold"></label>
+                <input asp-for="CostPerSeatMonthly" type="number" step="0.01" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Currency" class="form-label fw-semibold"></label>
+                <input asp-for="Currency" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label fw-semibold"></label>
+                <textarea asp-for="Notes" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary lw-btn" data-loading-text="Saving..."><i class="bi bi-check-circle me-1"></i>Save</button>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

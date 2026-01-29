@@ -1,0 +1,10 @@
+# Local certificates
+Certs/
+
+# Local backups
+backups/
+
+# Local artifacts
+nginx.tar
+cookies.txt
+cookies-admin.txt

@@ -1,0 +1,397 @@
+@model LicenseWatch.Web.Models.Admin.DashboardViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Dashboard";
+    var cspNonce = Context.Items["CspNonce"] as string;
+    var trendLabels = Model.ExpirationTrend.Select(t => t.Label).ToArray();
+    var trendValues = Model.ExpirationTrend.Select(t => t.Count).ToArray();
+    var trendLinks = Model.ExpirationTrend
+        .Select(t => Url.Action("Index", "Licenses", new { area = "Admin", expiringDays = t.ExpiringDays }) ?? "#")
+        .ToArray();
+    var statusLabels = Model.StatusCounts.Select(s => s.Label).ToArray();
+    var statusValues = Model.StatusCounts.Select(s => s.Value).ToArray();
+    var statusLinks = Model.StatusCounts
+        .Select(s => Url.Action("Index", "Licenses", new { area = "Admin", status = s.Label }) ?? "#")
+        .ToArray();
+    var vendorLabels = Model.VendorCounts.Select(v => v.Vendor).ToArray();
+    var vendorValues = Model.VendorCounts.Select(v => v.Count).ToArray();
+    var vendorLinks = Model.VendorCounts
+        .Select(v => Url.Action("Index", "Licenses", new { area = "Admin", vendor = v.Vendor }) ?? "#")
+        .ToArray();
+    var chartPayload = new
+    {
+        trend = new { labels = trendLabels, values = trendValues, links = trendLinks },
+        status = new { labels = statusLabels, values = statusValues, links = statusLinks },
+        vendors = new { labels = vendorLabels, values = vendorValues, links = vendorLinks }
+    };
+    var chartJson = JsonSerializer.Serialize(chartPayload);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Dashboard",
+        Subtitle = "License governance overview",
+        UpdatedLabel = $"Last refreshed {Model.LastRefreshedUtc:MMM dd, yyyy HH:mm}"
+    };
+    var rangeFilters = new List<FilterPillViewModel>
+    {
+        new() { Label = "7 days", Url = Url.Action("Index", new { rangeDays = 7 }) ?? "#", IsActive = Model.RangeDays == 7 },
+        new() { Label = "30 days", Url = Url.Action("Index", new { rangeDays = 30 }) ?? "#", IsActive = Model.RangeDays == 30 },
+        new() { Label = "90 days", Url = Url.Action("Index", new { rangeDays = 90 }) ?? "#", IsActive = Model.RangeDays == 90 }
+    };
+    var filterModel = new FilterBarViewModel
+    {
+        Label = "Date range",
+        Filters = rangeFilters
+    };
+    var emptyStateModel = new EmptyStateViewModel
+    {
+        Icon = "bi-stars",
+        Title = "Create your first license",
+        Message = "Start building your compliance portfolio by adding a license or importing a CSV. This unlocks trends, policy checks, and optimization opportunities.",
+        PrimaryCta = new CtaViewModel { Label = "Create license", Url = Url.Action("Create", "Licenses", new { area = "Admin" }) ?? "#", Icon = "bi-plus-circle" },
+        SecondaryCta = new CtaViewModel { Label = "Import CSV", Url = Url.Action("Index", "Import", new { area = "Admin" }) ?? "#", Icon = "bi-cloud-arrow-up" }
+    };
+    var criticalItems = Model.CriticalAttention.Take(3).Select(item => new PriorityListItemViewModel
+    {
+        Severity = item.Severity,
+        Summary = item.Title,
+        Why = item.Summary,
+        CtaLabel = "Review",
+        CtaUrl = item.TargetUrl ?? Url.Action("Index", "Compliance", new { area = "Admin" })
+    }).ToList();
+    var warningItems = Model.WarningAttention.Take(3).Select(item => new PriorityListItemViewModel
+    {
+        Severity = item.Severity,
+        Summary = item.Title,
+        Why = item.Summary,
+        CtaLabel = "Review",
+        CtaUrl = item.TargetUrl ?? Url.Action("Index", "Compliance", new { area = "Admin" })
+    }).ToList();
+    var attentionItems = criticalItems.Concat(warningItems).ToList();
+    var attentionModel = new PriorityListViewModel
+    {
+        Items = attentionItems,
+        EmptyMessage = "No urgent actions in the current window.",
+        EmptyIcon = "bi-shield-check",
+        EmptyCtaLabel = "View compliance",
+        EmptyCtaUrl = Url.Action("Index", "Compliance", new { area = "Admin" })
+    };
+    var hasAttention = Model.CriticalAttention.Any() || Model.WarningAttention.Any();
+    var criticalRiskCount = Model.Expired + Model.OveruseRisk;
+    var hasCriticalRisk = criticalRiskCount > 0;
+    var hasRenewalsSoon = Model.ExpiringSoon > 0;
+    var allocationExceptions = Model.OverAllocated;
+    var allocationLabel = allocationExceptions.HasValue ? allocationExceptions.Value.ToString("N0") : "N/A";
+    var allocationHasData = allocationExceptions.HasValue;
+    var allocationHasIssues = allocationExceptions.HasValue && allocationExceptions.Value > 0;
+    var allocationMetricClass = allocationHasIssues
+        ? "lw-summary-metric lw-summary-metric--warning"
+        : allocationHasData ? "lw-summary-metric lw-summary-metric--success" : "lw-summary-metric";
+    var healthBadgeClass = hasCriticalRisk
+        ? "bg-danger-subtle text-danger"
+        : hasRenewalsSoon ? "bg-warning-subtle text-warning" : "bg-success-subtle text-success";
+    var healthStatusTitle = hasCriticalRisk
+        ? "Critical risks detected"
+        : hasRenewalsSoon ? "Renewals approaching" : "Healthy posture";
+    var healthStatusMessage = hasCriticalRisk
+        ? "Immediate remediation required to avoid license exposure."
+        : hasRenewalsSoon ? "Review upcoming renewals to stay ahead." : "No critical issues detected in the current window.";
+    var healthActionUrl = hasCriticalRisk
+        ? "/admin/licenses?criticalRisk=true"
+        : hasRenewalsSoon ? "/admin/licenses?expiringDays=30" : "/admin/licenses";
+    var healthActionLabel = hasCriticalRisk
+        ? "Review risks"
+        : hasRenewalsSoon ? "Review renewals" : "Review portfolio";
+    var healthActionIcon = hasCriticalRisk
+        ? "bi-exclamation-octagon"
+        : hasRenewalsSoon ? "bi-calendar-event" : "bi-collection";
+    var nextRenewalLabel = Model.NextRenewalDateUtc.HasValue
+        ? Model.NextRenewalDateUtc.Value.ToLocalTime().ToString("MMM dd")
+        : null;
+}
+
+<partial name="_PageHeader" model="headerModel" />
+<partial name="_FilterBar" model="filterModel" />
+
+@if (!Model.HasLicenses)
+{
+    <div class="mb-4">
+        <partial name="_EmptyState" model="emptyStateModel" />
+    </div>
+}
+
+<div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 mb-3 mt-4">
+    <div>
+        <h2 class="h5 fw-semibold mb-1">At a glance</h2>
+        <div class="text-muted small">Curated signals for a fast executive scan.</div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4 align-items-stretch lw-kpi-row">
+    @foreach (var kpi in Model.Kpis)
+    {
+        <div class="col-md-6 col-xl-3">
+            <partial name="_KpiCard" model="kpi" />
+        </div>
+    }
+</div>
+
+<div class="row g-4 mb-4 align-items-stretch">
+    <div class="col-12">
+        @{
+            var healthCard = new SectionCardViewModel
+            {
+                Title = "Overall license health",
+                Subtitle = "Executive summary of risk posture and readiness.",
+                Actions = @<text>
+                    <a class="btn btn-sm btn-outline-secondary lw-btn" href="@healthActionUrl">
+                        <i class="bi @healthActionIcon me-1"></i>@healthActionLabel
+                    </a>
+                    <a class="btn btn-sm btn-outline-primary lw-btn" href="/admin/optimization/recommendations?status=Open">
+                        <i class="bi bi-lightbulb me-1"></i>View opportunities
+                    </a>
+                </text>,
+                Body = @<text>
+                    <div class="lw-health-summary">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge @healthBadgeClass text-nowrap">@healthStatusTitle</span>
+                            <span class="text-muted small">@healthStatusMessage</span>
+                        </div>
+                        <div class="row g-3 mt-3 align-items-stretch lw-summary-row">
+                            <div class="col-md-4">
+                                <div class="lw-summary-metric lw-summary-metric--critical h-100">
+                                    <div class="lw-summary-metric__label">Licenses at risk</div>
+                                    <div class="lw-summary-metric__value">@criticalRiskCount</div>
+                                    @if (criticalRiskCount == 0)
+                                    {
+                                        <div class="text-muted small">All clear</div>
+                                    }
+                                    else
+                                    {
+                                        <a class="lw-summary-metric__link" href="/admin/licenses?criticalRisk=true">Review</a>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="lw-summary-metric lw-summary-metric--warning h-100">
+                                    <div class="lw-summary-metric__label">Renewals soon</div>
+                                    <div class="lw-summary-metric__value">@Model.ExpiringSoon</div>
+                                    @if (Model.ExpiringSoon == 0)
+                                    {
+                                        <div class="text-muted small">Stable horizon</div>
+                                    }
+                                    else
+                                    {
+                                        <a class="lw-summary-metric__link" href="/admin/licenses?expiringDays=30">Review</a>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="@allocationMetricClass h-100">
+                                    <div class="lw-summary-metric__label">Allocation exceptions</div>
+                                    <div class="lw-summary-metric__value">@allocationLabel</div>
+                                    @if (!allocationHasData)
+                                    {
+                                        <div class="text-muted small">Seat tracking not configured</div>
+                                    }
+                                    else if (!allocationHasIssues)
+                                    {
+                                        <div class="text-muted small">No allocation gaps</div>
+                                    }
+                                    else
+                                    {
+                                        <a class="lw-summary-metric__link" href="/admin/licenses?overAllocated=true">Review</a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </text>
+            };
+        }
+        <partial name="_SectionCard" model="healthCard" />
+    </div>
+    <div class="col-12">
+        @{
+            var attentionCard = new SectionCardViewModel
+            {
+                Title = "Immediate actions",
+                Subtitle = "Address urgent policy breaches and time-sensitive renewals.",
+                Body = @<text>
+                    @if (!hasAttention)
+                    {
+                        <div class="lw-action-clear">
+                            <div class="lw-action-clear__icon">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">All clear</div>
+                                <div class="text-muted small">No critical or warning actions right now. Stay ahead by running daily checks.</div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <partial name="_PriorityList" model="attentionModel" />
+                    }
+                </text>
+            };
+        }
+        <div class="lw-action-center">
+            <partial name="_SectionCard" model="attentionCard" />
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4 align-items-stretch">
+    <div class="col-xl-6 lw-dashboard-tile">
+        @{
+            var trendCard = new SectionCardViewModel
+            {
+                Title = $"Renewal timeline (next {Model.RangeDays} days)",
+                Subtitle = "Upcoming expirations by window. Click a bar to drill in.",
+                Body = @<text>
+                    <div class="lw-chart lw-chart--interactive">
+                        @if (Model.ExpirationTrend.Count == 0)
+                        {
+                            <div class="lw-chart__empty">
+                                <i class="bi bi-calendar-event"></i>
+                                <div class="small text-muted">No renewals in the selected window.</div>
+                                <a class="btn btn-sm btn-outline-secondary" asp-area="Admin" asp-controller="Licenses" asp-action="Index">View licenses</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="lw-chart__skeleton lw-skeleton lw-skeleton-block"></div>
+                            <canvas id="trendChart" height="220" role="img" aria-label="Renewal timeline"></canvas>
+                            <div class="lw-chart__hint">Click a bar to review expiring licenses.</div>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.NextRenewalName) && Model.NextRenewalDays.HasValue)
+                    {
+                        <div class="lw-callout mt-3">
+                            <div class="lw-callout__icon">
+                                <i class="bi bi-bell"></i>
+                            </div>
+                            <div class="lw-callout__content">
+                                <div class="fw-semibold">Next renewal due</div>
+                                <div class="text-muted small">@Model.NextRenewalName in @Model.NextRenewalDays days (@nextRenewalLabel)</div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(Model.NextRenewalUrl))
+                            {
+                                <a class="btn btn-sm lw-btn btn-outline-primary" href="@Model.NextRenewalUrl">Review</a>
+                            }
+                        </div>
+                    }
+                </text>
+            };
+        }
+        <partial name="_SectionCard" model="trendCard" />
+    </div>
+    <div class="col-xl-6 lw-dashboard-tile">
+        @{
+            var optimizationCard = new SectionCardViewModel
+            {
+                Title = "Optimization opportunities",
+                Subtitle = "Allocation signals and savings insights.",
+                Actions = @<text>
+                    <a class="btn btn-sm btn-outline-secondary lw-btn" asp-area="Admin" asp-controller="Optimization" asp-action="Index">
+                        View insights
+                    </a>
+                </text>,
+                Body = @<text>
+                    <div class="@allocationMetricClass">
+                        <div class="lw-summary-metric__label">Allocation exceptions</div>
+                        <div class="lw-summary-metric__value">@allocationLabel</div>
+                        @if (!allocationHasData)
+                        {
+                            <div class="text-muted small">Seat tracking not configured</div>
+                        }
+                        else if (!allocationHasIssues)
+                        {
+                            <div class="text-muted small">No allocation gaps</div>
+                        }
+                        else
+                        {
+                            <a class="lw-summary-metric__link" href="/admin/licenses?overAllocated=true">Review licenses</a>
+                        }
+                    </div>
+                    <div class="text-muted small mt-3">
+                        Run optimization analysis to surface savings recommendations based on usage and allocation signals.
+                    </div>
+                </text>
+            };
+        }
+        <partial name="_SectionCard" model="optimizationCard" />
+    </div>
+</div>
+
+<div class="row g-4 mb-4 align-items-stretch">
+    <div class="col-xl-6 lw-dashboard-tile">
+        @{
+            var statusCard = new SectionCardViewModel
+            {
+                Title = "Portfolio health",
+                Subtitle = "Status distribution across the license estate.",
+                Body = @<text>
+                    <div class="lw-chart lw-chart--interactive">
+                        @if (Model.StatusCounts.Count == 0)
+                        {
+                            <div class="lw-chart__empty">
+                                <i class="bi bi-graph-up"></i>
+                                <div class="small text-muted">No status data yet.</div>
+                                <a class="btn btn-sm btn-outline-secondary" asp-area="Admin" asp-controller="Licenses" asp-action="Index">Review licenses</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="lw-chart__skeleton lw-skeleton lw-skeleton-block"></div>
+                            <canvas id="statusChart" height="220" role="img" aria-label="Portfolio health"></canvas>
+                            <div class="lw-chart__hint">Click a segment to filter licenses.</div>
+                        }
+                    </div>
+                </text>
+            };
+        }
+        <partial name="_SectionCard" model="statusCard" />
+    </div>
+    <div class="col-xl-6 lw-dashboard-tile">
+        @{
+            var vendorCard = new SectionCardViewModel
+            {
+                Title = "Top vendors by exposure",
+                Subtitle = "License concentration across vendors.",
+                Actions = @<text>
+                    <a class="btn btn-sm btn-outline-secondary lw-btn" asp-area="Admin" asp-controller="Reports" asp-action="Licenses">
+                        View vendor report
+                    </a>
+                </text>,
+                Body = @<text>
+                    <div class="lw-chart lw-chart--interactive">
+                        @if (Model.VendorCounts.Count == 0)
+                        {
+                            <div class="lw-chart__empty">
+                                <i class="bi bi-building"></i>
+                                <div class="small text-muted">No vendor data yet.</div>
+                                <a class="btn btn-sm btn-outline-secondary" asp-area="Admin" asp-controller="Reports" asp-action="Licenses">Open report</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="lw-chart__skeleton lw-skeleton lw-skeleton-block"></div>
+                            <canvas id="vendorChart" height="220" role="img" aria-label="Vendor exposure"></canvas>
+                            <div class="lw-chart__hint">Click a bar to view vendor licenses.</div>
+                        }
+                    </div>
+                </text>
+            };
+        }
+        <partial name="_SectionCard" model="vendorCard" />
+    </div>
+</div>
+
+<div id="dashboard-data" class="d-none" data-payload="@chartJson" aria-hidden="true"></div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="@cspNonce"></script>
+    <script src="~/js/dashboard.js" asp-append-version="true" nonce="@cspNonce"></script>
+}

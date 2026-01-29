@@ -1,0 +1,49 @@
+@model LicenseWatch.Web.Models.Account.LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    var loginCard = new SectionCardViewModel
+    {
+        Title = "Welcome back",
+        Subtitle = "Sign in to manage licenses, compliance, and operations.",
+        Body = @<text>
+            @if (!string.IsNullOrWhiteSpace(Model?.AlertMessage))
+            {
+                <div class="alert alert-warning" role="alert">@Model.AlertMessage</div>
+            }
+
+            <form asp-action="Login" method="post" class="mt-3">
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label">Email address</label>
+                    <input asp-for="Email" class="form-control" autocomplete="username" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label">Password</label>
+                    <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Sign in</button>
+                    <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Back to home</a>
+                </div>
+            </form>
+
+            <div class="mt-4 small text-muted">
+                Need access? Ask a SystemAdmin to create your account or use the register form in dev.
+            </div>
+        </text>
+    };
+}
+
+<div class="auth-card fade-up">
+    <div class="text-center mb-3">
+        <partial name="_Logo" model="@("lw-logo--lg")" />
+    </div>
+    <partial name="_SectionCard" model="loginCard" />
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

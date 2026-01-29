@@ -1,0 +1,108 @@
+@model LicenseWatch.Web.Models.Admin.DatabaseStatusViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Database";
+    var canManageDb = await PermissionService.HasPermissionAsync(User, PermissionKeys.DatabaseManage);
+    var canApplyMigrations = await PermissionService.HasPermissionAsync(User, PermissionKeys.MigrationsManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Database status",
+        Subtitle = "Validate connectivity and track migrations.",
+        Actions = @<text>
+            <form asp-action="TestConnection" method="post">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-secondary lw-btn" type="submit" data-loading-text="Testing..." @(canManageDb ? "" : "disabled")>
+                    <i class="bi bi-plug me-1"></i>Test connection
+                </button>
+            </form>
+            <form asp-action="ApplyMigrations" method="post">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-primary lw-btn" type="submit" data-loading-text="Applying..." @(canApplyMigrations ? "" : "disabled")>
+                    <i class="bi bi-arrow-repeat me-1"></i>Apply migrations
+                </button>
+            </form>
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <i class="bi bi-info-circle me-2"></i>@Model.AlertMessage
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="metric-tile">
+            <div class="text-muted small">Environment</div>
+            <div class="h5 fw-semibold mb-0">@Model.Environment</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-tile">
+            <div class="text-muted small">Applied migrations</div>
+            <div class="h5 fw-semibold mb-0">@Model.AppliedMigrationsCount</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-tile">
+            <div class="text-muted small">Connection string</div>
+            <div class="small text-muted text-truncate">@Model.MaskedConnectionString</div>
+        </div>
+    </div>
+</div>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <h2 class="h6 fw-semibold">Pending migrations</h2>
+                @if (!Model.PendingMigrations.Any())
+                {
+                    <div class="lw-empty-inline">
+                        <span class="lw-empty-inline__icon"><i class="bi bi-check-circle"></i></span>
+                        <div class="text-muted small">No pending migrations right now.</div>
+                        <a class="btn btn-sm btn-outline-secondary" href="/admin/database">Refresh status</a>
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var migration in Model.PendingMigrations)
+                        {
+                            <li class="list-group-item px-0">@migration</li>
+                        }
+                    </ul>
+                }
+            </div>
+            <div class="col-lg-6">
+                <h2 class="h6 fw-semibold">Applied migrations</h2>
+                @if (!Model.AppliedMigrations.Any())
+                {
+                    <div class="lw-empty-inline">
+                        <span class="lw-empty-inline__icon"><i class="bi bi-journal-check"></i></span>
+                        <div class="text-muted small">No applied migrations recorded yet.</div>
+                        <a class="btn btn-sm btn-outline-secondary" href="/admin/database">Refresh status</a>
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var migration in Model.AppliedMigrations)
+                        {
+                            <li class="list-group-item px-0">@migration</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+

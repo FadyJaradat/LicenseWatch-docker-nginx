@@ -1,0 +1,53 @@
+@model LicenseWatch.Web.Models.Admin.ComplianceRunResultViewModel
+@{
+    ViewData["Title"] = "Compliance run";
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Compliance results",
+        Subtitle = $"Evaluation window: {Model.WindowStart} - {Model.WindowEnd}",
+        Actions = @<text>
+            <a class="btn btn-outline-secondary lw-btn" asp-action="Index">
+                <i class="bi bi-arrow-left me-1"></i>Back to compliance
+            </a>
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Opened</div>
+            <div class="h4 fw-semibold mb-0">@Model.Opened</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Updated</div>
+            <div class="h4 fw-semibold mb-0">@Model.Updated</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Resolved</div>
+            <div class="h4 fw-semibold mb-0">@Model.Resolved</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Open now</div>
+            <div class="h4 fw-semibold mb-0">@Model.TotalOpen</div>
+        </div>
+    </div>
+</div>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        <h2 class="h6 fw-semibold">Status summary</h2>
+        <p class="text-secondary mb-0">Acknowledged: @Model.TotalAcknowledged | Resolved: @Model.TotalResolved</p>
+    </div>
+</div>
+

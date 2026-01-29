@@ -1,0 +1,29 @@
+@model EmptyStateViewModel
+
+<div class="lw-empty-state">
+    <div class="lw-empty-state__icon"><i class="bi @Model.Icon"></i></div>
+    <div class="lw-empty-state__title">@Model.Title</div>
+    <div class="lw-empty-state__message">@Model.Message</div>
+    <div class="lw-empty-state__actions">
+        @if (Model.PrimaryCta is not null)
+        {
+            <a class="btn lw-btn btn-primary" href="@Model.PrimaryCta.Url">
+                @if (!string.IsNullOrWhiteSpace(Model.PrimaryCta.Icon))
+                {
+                    <i class="bi @Model.PrimaryCta.Icon me-1"></i>
+                }
+                @Model.PrimaryCta.Label
+            </a>
+        }
+        @if (Model.SecondaryCta is not null)
+        {
+            <a class="btn lw-btn btn-outline-secondary" href="@Model.SecondaryCta.Url">
+                @if (!string.IsNullOrWhiteSpace(Model.SecondaryCta.Icon))
+                {
+                    <i class="bi @Model.SecondaryCta.Icon me-1"></i>
+                }
+                @Model.SecondaryCta.Label
+            </a>
+        }
+    </div>
+</div>

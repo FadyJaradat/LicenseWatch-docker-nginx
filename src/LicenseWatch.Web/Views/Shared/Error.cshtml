@@ -1,0 +1,22 @@
+@model LicenseWatch.Web.Models.ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+    var emptyState = new EmptyStateViewModel
+    {
+        Icon = "bi-exclamation-triangle",
+        Title = "Something went wrong",
+        Message = "We hit an unexpected error. Please try again or contact an administrator.",
+        PrimaryCta = new CtaViewModel { Label = "Return home", Url = Url.Content("~/") ?? "/" }
+    };
+}
+
+<section class="fade-up">
+    <div class="text-center mb-4">
+        <partial name="_Logo" model="@("lw-logo--lg")" />
+    </div>
+    @if (Model.ShowRequestId)
+    {
+        <div class="text-center text-muted small mb-3">Request ID: <span class="fw-semibold">@Model.RequestId</span></div>
+    }
+    <partial name="_EmptyState" model="emptyState" />
+</section>

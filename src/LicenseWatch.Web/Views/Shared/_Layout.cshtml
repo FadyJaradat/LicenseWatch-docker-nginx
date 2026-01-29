@@ -1,0 +1,13 @@
+@{
+    Layout = "_AppShell";
+}
+
+@RenderBody()
+
+@section Head {
+    @RenderSection("Head", required: false)
+}
+
+@section Scripts {
+    @RenderSection("Scripts", required: false)
+}

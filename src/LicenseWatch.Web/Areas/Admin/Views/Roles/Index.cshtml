@@ -1,0 +1,151 @@
+@model LicenseWatch.Web.Models.Admin.RoleListViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Roles";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.RolesManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Roles",
+        Subtitle = "Manage access levels for LicenseWatch users.",
+        Actions = @<text>
+            @if (canManage)
+            {
+                <a class="btn btn-outline-secondary lw-btn" href="#create-role">
+                    <i class="bi bi-plus-circle me-1"></i>Create role
+                </a>
+            }
+            else
+            {
+                <button class="btn btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage roles.">
+                    <i class="bi bi-plus-circle me-1"></i>Create role
+                </button>
+            }
+        </text>
+    };
+}
+
+<partial name="_PageHeader" model="headerModel" />
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle" data-toast="true" role="alert">
+        <div>@Model.AlertMessage</div>
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <pre class="small mb-0">@Model.AlertDetails</pre>
+            </details>
+        }
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card lw-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Role list</h5>
+                <span class="text-muted small">@Model.Roles.Count roles</span>
+            </div>
+            @if (Model.Roles.Count == 0)
+            {
+                <div class="lw-empty-inline">
+                    <span class="lw-empty-inline__icon"><i class="bi bi-award"></i></span>
+                    <div class="text-muted small">No roles defined yet. Create one to assign permissions.</div>
+                    <a class="btn btn-sm btn-outline-secondary" href="#create-role">Create role</a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th>Users</th>
+                                <th>Notes</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var role in Model.Roles)
+                            {
+                                var isSystemRole = string.Equals(role.Name, "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+                                var canDelete = !isSystemRole && role.UserCount == 0 && canManage;
+                                var deleteModalId = $"delete-role-{role.Name}".Replace(" ", "-").ToLowerInvariant();
+                                <tr>
+                                    <td class="fw-semibold">
+                                        <a class="text-decoration-none" asp-action="Details" asp-route-roleName="@role.Name">@role.Name</a>
+                                    </td>
+                                    <td>@role.UserCount</td>
+                                    <td class="text-muted">@(isSystemRole ? "Protected" : role.UserCount > 0 ? "Assigned" : "Custom role")</td>
+                                    <td class="text-end">
+                                        @if (canManage)
+                                        {
+                                            <a class="btn btn-sm btn-outline-primary lw-btn" asp-action="Details" asp-route-roleName="@role.Name">Permissions</a>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary lw-btn" type="button" disabled title="You do not have permission to manage roles.">Permissions</button>
+                                        }
+                                        @if (isSystemRole)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger lw-btn ms-1" type="button" disabled title="SystemAdmin cannot be deleted.">Delete</button>
+                                        }
+                                        else if (role.UserCount > 0)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger lw-btn ms-1" type="button" disabled title="Remove users before deleting this role.">Delete</button>
+                                        }
+                                        else if (canManage)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger lw-btn ms-1" type="button" data-bs-toggle="modal" data-bs-target="#@deleteModalId">
+                                                Delete
+                                            </button>
+                                            <div class="modal fade" id="@deleteModalId" tabindex="-1" aria-labelledby="@deleteModalId-label" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="@deleteModalId-label">Delete role</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            This will permanently delete <strong>@role.Name</strong>. This action cannot be undone.
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light lw-btn" data-bs-dismiss="modal">Cancel</button>
+                                                            <form asp-action="Delete" asp-route-roleName="@role.Name" method="post">
+                                                                @Html.AntiForgeryToken()
+                                                                <button type="submit" class="btn btn-danger lw-btn" data-loading-text="Deleting...">Delete role</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card lw-card p-4" id="create-role">
+            <h5>Create role</h5>
+            <p class="text-muted">Add a new role to assign to users.</p>
+            <form asp-area="Admin" asp-controller="Roles" asp-action="Create" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Role name</label>
+                    <input class="form-control" name="roleName" placeholder="Ex: ComplianceManager" @(canManage ? "" : "disabled") />
+                </div>
+                <button type="submit" class="btn btn-primary lw-btn" data-loading-text="Creating..." @(canManage ? "" : "disabled")>Create role</button>
+            </form>
+            <div class="small text-muted mt-3">SystemAdmin is required for platform access and cannot be deleted.</div>
+        </div>
+    </div>
+</div>
+
+

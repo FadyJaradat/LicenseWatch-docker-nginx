@@ -1,0 +1,243 @@
+@model LicenseWatch.Web.Models.Admin.ComplianceListViewModel
+@using LicenseWatch.Web.Security
+@inject IPermissionService PermissionService
+@{
+    ViewData["Title"] = "Compliance";
+    var canManage = await PermissionService.HasPermissionAsync(User, PermissionKeys.ComplianceManage);
+    var headerModel = new PageHeaderViewModel
+    {
+        Title = "Compliance center",
+        Subtitle = "Monitor and resolve licensing violations.",
+        UpdatedLabel = Model.LastEvaluatedAtUtc.HasValue
+            ? $"Last evaluated {Model.LastEvaluatedAtUtc.Value.ToLocalTime():MMM dd, yyyy HH:mm}"
+            : "No evaluations yet",
+        Actions = @<text>
+            <form asp-action="Run" method="post" class="d-flex flex-wrap gap-2 align-items-center" id="run-evaluation">
+                @Html.AntiForgeryToken()
+                <select class="form-select" name="windowDays" @(canManage ? "" : "disabled")>
+                    <option value="">Window</option>
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                </select>
+                <button type="submit" class="btn btn-primary lw-btn" data-loading-text="Running evaluation..." @(canManage ? "" : "disabled")>
+                    <i class="bi bi-play-circle me-1"></i>Run evaluation
+                </button>
+            </form>
+        </text>
+    };
+}
+
+<div class="fade-up">
+    <partial name="_PageHeader" model="headerModel" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+{
+    <div class="alert alert-@Model.AlertStyle shadow-sm border-0" data-toast="true">
+        <i class="bi bi-info-circle me-2"></i>@Model.AlertMessage
+        @if (!string.IsNullOrWhiteSpace(Model.AlertDetails))
+        {
+            <details class="lw-details mt-2">
+                <summary>Details</summary>
+                <div class="small text-muted mt-1">@Model.AlertDetails</div>
+            </details>
+        }
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Open violations</div>
+            <div class="h4 fw-semibold mb-0">@Model.OpenCount</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Critical</div>
+            <div class="h4 fw-semibold mb-0">@Model.CriticalCount</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Warning</div>
+            <div class="h4 fw-semibold mb-0">@Model.WarningCount</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-tile">
+            <div class="text-muted small">Acknowledged</div>
+            <div class="h4 fw-semibold mb-0">@Model.AcknowledgedCount</div>
+        </div>
+    </div>
+</div>
+
+<form method="get" class="card lw-card shadow-sm border-0 mb-4">
+    <div class="card-body lw-card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All</option>
+                    <option value="Open" selected="@(Model.Status == "Open")">Open</option>
+                    <option value="Acknowledged" selected="@(Model.Status == "Acknowledged")">Acknowledged</option>
+                    <option value="Resolved" selected="@(Model.Status == "Resolved")">Resolved</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Severity</label>
+                <select class="form-select" name="severity">
+                    <option value="">All</option>
+                    <option value="Critical" selected="@(Model.Severity == "Critical")">Critical</option>
+                    <option value="Warning" selected="@(Model.Severity == "Warning")">Warning</option>
+                    <option value="Info" selected="@(Model.Severity == "Info")">Info</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Rule</label>
+                <select class="form-select" name="rule">
+                    <option value="">All</option>
+                    @foreach (var key in Model.RuleKeys)
+                    {
+                        <option value="@key" selected="@(Model.RuleKey == key)">@key</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Search</label>
+                <input class="form-control" name="search" value="@Model.Search" placeholder="License or vendor" />
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary lw-btn" type="submit"><i class="bi bi-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary lw-btn" href="/admin/compliance">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="card lw-card shadow-sm border-0">
+    <div class="card-body lw-card-body">
+        @if (!Model.Violations.Any())
+        {
+            var emptyState = new EmptyStateViewModel
+            {
+                Icon = "bi-shield-check",
+                Title = "No policy breaches found",
+                Message = "Your current filters show a clean compliance window. Run a fresh evaluation to confirm.",
+                PrimaryCta = new CtaViewModel
+                {
+                    Label = "Run evaluation",
+                    Url = "#run-evaluation",
+                    Icon = "bi-play-circle"
+                },
+                SecondaryCta = new CtaViewModel
+                {
+                    Label = "Reset filters",
+                    Url = "/admin/compliance",
+                    Icon = "bi-arrow-counterclockwise"
+                }
+            };
+            <partial name="_EmptyState" model="emptyState" />
+        }
+        else
+        {
+            <div class="accordion" id="violationList">
+                @for (var i = 0; i < Model.Violations.Count; i++)
+                {
+                    var violation = Model.Violations[i];
+                    var collapseId = $"violation-{violation.Id}";
+                    <div class="accordion-item mb-3 border-0">
+                        <div class="accordion-header" id="@collapseId-heading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId">
+                                <div class="w-100 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                                    <div>
+                                        <span class="badge @SeverityBadge(violation.Severity) me-2">@violation.Severity</span>
+                                        <span class="fw-semibold">@violation.Title</span>
+                                        <span class="text-muted small ms-2">@violation.RuleKey</span>
+                                    </div>
+                                    <div class="text-muted small mt-2 mt-md-0">@violation.LicenseName</div>
+                                </div>
+                            </button>
+                        </div>
+                        <div id="@collapseId" class="accordion-collapse collapse" data-bs-parent="#violationList">
+                            <div class="accordion-body">
+                                <p class="text-secondary">@violation.Details</p>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <div class="text-muted small">Detected</div>
+                                        <div class="fw-semibold">@violation.DetectedAtUtc.ToLocalTime().ToString("g")</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-muted small">Last evaluated</div>
+                                        <div class="fw-semibold">@violation.LastEvaluatedAtUtc.ToLocalTime().ToString("g")</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-muted small">Status</div>
+                                        <div class="fw-semibold">@violation.Status</div>
+                                    </div>
+                                </div>
+                                @if (violation.EvidenceItems.Any())
+                                {
+                                    <div class="row g-2">
+                                        @foreach (var evidence in violation.EvidenceItems)
+                                        {
+                                            <div class="col-md-4">
+                                                <div class="p-2 bg-light rounded">
+                                                    <div class="text-muted small">@evidence.Label</div>
+                                                    <div class="fw-semibold">@evidence.Value</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                <div class="border-top mt-3 pt-3">
+                                    @if (canManage)
+                                    {
+                                        <form asp-action="Acknowledge" asp-route-id="@violation.Id" method="post" class="d-flex flex-column flex-md-row gap-2">
+                                            @Html.AntiForgeryToken()
+                                            <input class="form-control" name="note" placeholder="Add acknowledgment note" />
+                                            <button class="btn btn-outline-primary lw-btn" type="submit" data-loading-text="Saving...">Acknowledge</button>
+                                        </form>
+                                        <form asp-action="Resolve" asp-route-id="@violation.Id" method="post" class="d-flex flex-column flex-md-row gap-2 mt-2">
+                                            @Html.AntiForgeryToken()
+                                            <input class="form-control" name="note" placeholder="Add resolution note" />
+                                            <button class="btn btn-outline-success lw-btn" type="submit" data-loading-text="Resolving...">Resolve</button>
+                                        </form>
+                                        @if (violation.CanSimulate)
+                                        {
+                                            <form asp-action="Simulate" asp-route-id="@violation.Id" method="post" class="d-flex flex-column flex-md-row gap-2 mt-2">
+                                                @Html.AntiForgeryToken()
+                                                <input class="form-control" name="note" placeholder="Simulation note (optional)" />
+                                                <button class="btn btn-outline-warning lw-btn" type="submit" data-loading-text="Simulating...">Simulate enforcement</button>
+                                            </form>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="lw-empty-inline">
+                                            <span class="lw-empty-inline__icon"><i class="bi bi-lock"></i></span>
+                                            <div class="text-muted small">You do not have permission to acknowledge or resolve policy breaches.</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private static string SeverityBadge(string severity)
+        => severity switch
+        {
+            "Critical" => "bg-danger-subtle text-danger",
+            "Warning" => "bg-warning-subtle text-warning",
+            _ => "bg-primary-subtle text-primary"
+        };
+}
+
+
