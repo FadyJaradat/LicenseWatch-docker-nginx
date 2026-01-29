@@ -8,3 +8,8 @@ backups/
 nginx.tar
 cookies.txt
 cookies-admin.txt
+
+# Build outputs
+**/bin/
+**/obj/
+TestResults/
