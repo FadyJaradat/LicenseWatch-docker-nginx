@@ -15,10 +15,38 @@ public class HelpController : Controller
             {
                 new()
                 {
+                    Version = "v4.3.4",
+                    Title = "Dependency refresh + stability updates",
+                    DateLabel = "January 2026",
+                    IsCurrent = true,
+                    Sections = new List<ReleaseNotesSection>
+                    {
+                        new()
+                        {
+                            Title = "New features",
+                            Items = new List<string>
+                            {
+                                "Upgraded Hangfire.Core to 1.8.22 for the latest fixes.",
+                                "Updated CsvHelper to 33.1.0 and Cronos to 0.11.1.",
+                                "Upgraded test tooling (Microsoft.NET.Test.Sdk + xUnit runner) to latest."
+                            }
+                        },
+                        new()
+                        {
+                            Title = "Improvements",
+                            Items = new List<string>
+                            {
+                                "Dependency refresh across production and test packages to reduce known issues."
+                            }
+                        }
+                    }
+                },
+                new()
+                {
                     Version = "v4.3.3",
                     Title = "Governance hardening + modal stability",
                     DateLabel = "January 2026",
-                    IsCurrent = true,
+                    IsCurrent = false,
                     Sections = new List<ReleaseNotesSection>
                     {
                         new()
