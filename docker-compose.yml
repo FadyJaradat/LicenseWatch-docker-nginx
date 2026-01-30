@@ -45,6 +45,21 @@ services:
       - ./ops/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./Certs:/etc/nginx/certs:ro
 
+  licensewatch-nginx-prod:
+    profiles:
+      - prod
+    container_name: licensewatch-nginx-prod
+    image: nginx:latest
+    depends_on:
+      - licensewatch-web-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ops/nginx/conf.d/licensewatch-prod.conf:/etc/nginx/conf.d/licensewatch.conf:ro
+      - ./Certs:/etc/nginx/certs:ro
+
   licensewatch-test:
     profiles:
       - test
